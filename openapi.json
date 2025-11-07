@@ -1,0 +1,935 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Cluber 社团管理系统 API",
+    "description": "基于 Vue 3 + Element Plus 的社团管理系统接口文档（优化版）",
+    "version": "1.0.2"
+  },
+  "servers": [
+    {
+      "url": "{baseUrl}",
+      "description": "API 基础路径",
+      "variables": {
+        "baseUrl": {
+          "default": "http://localhost:3000/api",
+          "description": "开发环境基础地址"
+        }
+      }
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string", "example": "student1" },
+          "password": { "type": "string", "example": "123456" }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["username", "password", "confirmPassword"],
+        "properties": {
+          "username": { "type": "string", "example": "newstudent" },
+          "password": { "type": "string", "example": "123456" },
+          "confirmPassword": { "type": "string", "example": "123456" },
+          "name": { "type": "string", "example": "新用户" }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "number", "example": 1001 },
+          "username": { "type": "string", "example": "student1" },
+          "name": { "type": "string", "example": "张三" },
+          "role": { "type": "string", "enum": ["student", "clubAdmin", "systemAdmin"], "example": "student" },
+          "avatar": { "type": "string", "example": "/avatar/default.png" }
+        }
+      },
+      "Club": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "number", "example": 1 },
+          "name": { "type": "string", "example": "计算机协会" },
+          "avatar": { "type": "string", "example": "/club/1.png" },
+          "description": { "type": "string", "example": "专注编程与技术交流" },
+          "memberCount": { "type": "number", "example": 120 },
+          "status": { "type": "string", "enum": ["active", "inactive"], "example": "active" }
+        }
+      },
+      "Activity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "number", "example": 101 },
+          "title": { "type": "string", "example": "编程大赛" },
+          "clubId": { "type": "number", "example": 1 },
+          "clubName": { "type": "string", "example": "计算机协会" },
+          "time": { "type": "string", "format": "date-time", "example": "2023-10-01T14:00:00" },
+          "location": { "type": "string", "example": "学术报告厅" },
+          "signUpCount": { "type": "number", "example": 80 },
+          "status": { "type": "string", "enum": ["pending", "approved", "completed"], "example": "approved" }
+        }
+      },
+      "Notice": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "number", "example": 501 },
+          "title": { "type": "string", "example": "社团招新通知" },
+          "content": { "type": "string", "example": "新学期社团招新开始啦..." },
+          "createTime": { "type": "string", "format": "date-time", "example": "2023-09-01T09:00:00" },
+          "updateTime": { "type": "string", "format": "date-time", "example": "2023-09-01T10:30:00" },
+          "creatorId": { "type": "number", "example": 1001 },
+          "creatorName": { "type": "string", "example": "系统管理员" }
+        }
+      },
+      "NoticeCreateRequest": {
+        "type": "object",
+        "required": ["title", "content"],
+        "properties": {
+          "title": { "type": "string", "example": "新公告标题" },
+          "content": { "type": "string", "example": "公告详细内容" }
+        }
+      },
+      "NoticeUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "更新后的标题" },
+          "content": { "type": "string", "example": "更新后的内容" }
+        }
+      },
+      "Push": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "number", "example": 301 },
+          "title": { "type": "string", "example": "活动审核通过" },
+          "content": { "type": "string", "example": "您申请的编程大赛已通过审核" },
+          "time": { "type": "string", "format": "date-time", "example": "2023-09-15T16:30:00" },
+          "userId": { "type": "number", "example": 1001 },
+          "isRead": { "type": "boolean", "example": false }
+        }
+      },
+      "ApplyJoinRequest": {
+        "type": "object",
+        "required": ["clubId"],
+        "properties": {
+          "clubId": { "type": "number", "example": 1 },
+          "reason": { "type": "string", "example": "我对编程很感兴趣，希望加入协会学习" }
+        }
+      },
+      "ApplyCreateClubRequest": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string", "example": "机器人社团" },
+          "description": { "type": "string", "example": "专注机器人技术研究与交流" },
+          "avatar": { "type": "string", "example": "/temp/robot.png" }
+        }
+      },
+      "ApplyActivityRequest": {
+        "type": "object",
+        "required": ["title", "clubId", "time", "location"],
+        "properties": {
+          "title": { "type": "string", "example": "人工智能讲座" },
+          "clubId": { "type": "number", "example": 1 },
+          "time": { "type": "string", "format": "date-time", "example": "2023-11-10T15:00:00" },
+          "location": { "type": "string", "example": "图书馆报告厅" },
+          "description": { "type": "string", "example": "邀请专家讲解AI发展趋势" }
+        }
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "number", "example": 0 },
+          "msg": { "type": "string", "example": "操作成功" },
+          "data": { "type": "object" }
+        }
+      },
+      "PageResult": {
+        "type": "object",
+        "properties": {
+          "list": { "type": "array", "items": { "type": "object" } },
+          "total": { "type": "number", "example": 20 },
+          "page": { "type": "number", "example": 1 },
+          "size": { "type": "number", "example": 10 },
+          "pages": { "type": "number", "example": 2 }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/user/login": {
+      "post": {
+        "summary": "用户登录",
+        "tags": ["用户认证"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+                            "expireTime": { "type": "string", "format": "date-time", "example": "2023-12-31T23:59:59" }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "登录失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "number", "example": 401 },
+                    "msg": { "type": "string", "example": "用户名或密码错误" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/register": {
+      "post": {
+        "summary": "用户注册",
+        "tags": ["用户认证"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "注册失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "number", "example": 400 },
+                    "msg": { "type": "string", "example": "用户名已存在" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/info": {
+      "get": {
+        "summary": "获取用户信息",
+        "tags": ["用户认证"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/UserInfo" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "number", "example": 401 },
+                    "msg": { "type": "string", "example": "请先登录" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "更新用户信息",
+        "tags": ["用户认证"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "张三" },
+                  "avatar": { "type": "string", "example": "/avatar/new.png" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/club/list": {
+      "get": {
+        "summary": "获取社团列表",
+        "tags": ["社团管理"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "number", "default": 1 } },
+          { "name": "size", "in": "query", "schema": { "type": "number", "default": 10 } },
+          { "name": "searchKey", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "inactive"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            { "$ref": "#/components/schemas/PageResult" },
+                            {
+                              "properties": {
+                                "list": { "type": "array", "items": { "$ref": "#/components/schemas/Club" } }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/club/{id}": {
+      "get": {
+        "summary": "获取社团详情",
+        "tags": ["社团管理"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Club" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "社团不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "number", "example": 404 },
+                    "msg": { "type": "string", "example": "社团不存在" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/club/my": {
+      "get": {
+        "summary": "获取我的社团列表",
+        "tags": ["社团管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "number", "default": 1 } },
+          { "name": "size", "in": "query", "schema": { "type": "number", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            { "$ref": "#/components/schemas/PageResult" },
+                            {
+                              "properties": {
+                                "list": { "type": "array", "items": { "$ref": "#/components/schemas/Club" } }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activity/list": {
+      "get": {
+        "summary": "获取活动列表",
+        "tags": ["活动管理"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "number", "default": 1 } },
+          { "name": "size", "in": "query", "schema": { "type": "number", "default": 10 } },
+          { "name": "clubId", "in": "query", "schema": { "type": "number" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "completed"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            { "$ref": "#/components/schemas/PageResult" },
+                            {
+                              "properties": {
+                                "list": { "type": "array", "items": { "$ref": "#/components/schemas/Activity" } }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activity/hot": {
+      "get": {
+        "summary": "获取热门活动",
+        "tags": ["活动管理"],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "number", "default": 5 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Activity" }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activity/{id}": {
+      "get": {
+        "summary": "获取活动详情",
+        "tags": ["活动管理"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Activity" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/activity/{id}/sign": {
+      "post": {
+        "summary": "活动报名",
+        "tags": ["活动管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "报名成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "报名失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "number", "example": 400 },
+                    "msg": { "type": "string", "example": "已报名该活动" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apply/activity": {
+      "post": {
+        "summary": "申请举办活动",
+        "tags": ["申请管理"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApplyActivityRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "申请成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notice/list": {
+      "get": {
+        "summary": "获取公告列表",
+        "tags": ["公告管理"],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "number", "default": 1 } },
+          { "name": "size", "in": "query", "schema": { "type": "number", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            { "$ref": "#/components/schemas/PageResult" },
+                            {
+                              "properties": {
+                                "list": { "type": "array", "items": { "$ref": "#/components/schemas/Notice" } }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notice/{id}": {
+      "get": {
+        "summary": "获取公告详情",
+        "tags": ["公告管理"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Notice" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "更新公告",
+        "tags": ["公告管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/NoticeUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除公告",
+        "tags": ["公告管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notice": {
+      "post": {
+        "summary": "创建公告",
+        "tags": ["公告管理"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/NoticeCreateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": { "type": "object", "properties": { "id": { "type": "number", "example": 502 } } }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/push/list": {
+      "get": {
+        "summary": "获取推送列表",
+        "tags": ["推送管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "number", "default": 1 } },
+          { "name": "size", "in": "query", "schema": { "type": "number", "default": 10 } },
+          { "name": "isRead", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            { "$ref": "#/components/schemas/PageResult" },
+                            {
+                              "properties": {
+                                "list": { "type": "array", "items": { "$ref": "#/components/schemas/Push" } }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/push/{id}": {
+      "get": {
+        "summary": "获取推送详情",
+        "tags": ["推送管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/ApiResponse" },
+                    {
+                      "properties": {
+                        "data": { "$ref": "#/components/schemas/Push" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/push/{id}/read": {
+      "put": {
+        "summary": "标记推送为已读",
+        "tags": ["推送管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "操作成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apply/join": {
+      "post": {
+        "summary": "申请加入社团",
+        "tags": ["申请管理"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApplyJoinRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "申请成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apply/create": {
+      "post": {
+        "summary": "申请创建社团",
+        "tags": ["申请管理"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApplyCreateClubRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "申请成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apply/my": {
+      "get": {
+        "summary": "获取我的申请列表",
+        "tags": ["申请管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "number", "default": 1 } },
+          { "name": "size", "in": "query", "schema": { "type": "number", "default": 10 } },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["join", "create", "activity"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apply/club/join": {
+      "get": {
+        "summary": "获取社团的加入申请列表",
+        "tags": ["申请管理"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "clubId", "in": "query", "required": true, "schema": { "type": "number" } },
+          { "name": "page", "in": "query", "schema": { "type": "number", "default": 1 } },
+          { "name": "size", "in": "query", "schema": { "type": "number", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
