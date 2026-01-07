@@ -1,7 +1,6 @@
 <template>
   <div class="dashboard-wrapper">
     <el-row :gutter="20" class="chart-row">
-      <!-- 左侧：活跃度折线图 -->
       <el-col :xs="24" :lg="16" class="mb-20">
         <el-card shadow="hover" class="chart-card">
           <template #header>
