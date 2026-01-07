@@ -12,7 +12,6 @@
         </el-card>
       </el-col>
 
-      <!-- 右侧：成员分布饼图 -->
       <el-col :xs="24" :lg="8" class="mb-20">
         <el-card shadow="hover" class="chart-card">
           <template #header>
