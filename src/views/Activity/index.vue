@@ -23,6 +23,7 @@
             placeholder="状态筛选"
             size="small"
             @change="handleFilterChange"
+            class="filterStatus"
           >
             <el-option label="全部活动" value="" />
             <el-option label="未开始" value="upcoming" />
@@ -189,6 +190,10 @@ onMounted(() => {
   width: 300px;
 }
 
+.filterStatus {
+  width: 200px;
+  float: right;
+}
 .header-actions {
   display: flex;
   justify-content: space-between;

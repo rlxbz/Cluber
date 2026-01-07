@@ -30,13 +30,13 @@ import { useUserStore } from "@/stores/userStore";
 import { useRouter } from "vue-router";
 import { ElDropdown, ElDropdownMenu, ElDropdownItem, ElMessage } from "element-plus";
 import CommonButton from "@/components/common/Button/index.vue";
-import { ref } from "vue";
+import { computed } from "vue";
 
 const router = useRouter();
 const userStore = useUserStore();
-// 直接通过token判断登录状态
-const token = ref(localStorage.getItem("token"));
-const userInfo = userStore.userInfo;
+// 从 userStore 中获取 token（支持 sessionStorage）
+const token = computed(() => userStore.token);
+const userInfo = computed(() => userStore.userInfo);
 
 const toLogin = () => {
   router.push("/login");
@@ -44,8 +44,6 @@ const toLogin = () => {
 
 const handleLogout = () => {
   userStore.logout();
-  localStorage.removeItem("token");
-  token.value = null; // 刷新状态
   ElMessage.success("已退出登录");
   router.push("/login");
 };

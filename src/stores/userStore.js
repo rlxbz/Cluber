@@ -34,6 +34,12 @@ export const useUserStore = defineStore('user', {
     userInfo: userStorage.get('userInfo') || null,
     role: userStorage.get('role') || '' // 角色：student/club_admin/system_admin
   }),
+  getters: {
+    // 判断是否已登录
+    isLogin() {
+      return !!this.token
+    }
+  },
   actions: {
     // 登录（支持本地模拟登录）
     async login(userData) {
@@ -55,7 +61,7 @@ export const useUserStore = defineStore('user', {
         userStorage.set('userInfo', this.userInfo)
         userStorage.set('role', this.role)
         
-        // ElMessage.success('登录成功（本地模拟）')
+        ElMessage.success('登录成功（本地模拟）')
         return { success: true }
       } else {
         ElMessage.error('用户名或密码错误（本地模拟）')

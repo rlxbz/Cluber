@@ -134,9 +134,7 @@ const router = createRouter({
       name: "Login",
       component: Login,
       meta: { requiresAuth: false },
-      beforeEnter: (to, from, next) => {
-        next(localStorage.getItem("token") ? "/" : undefined);
-      },
+      // beforeEnter 已由 guard.js 统一处理，这里移除避免重复检查
     },
     {
       path: "/setting", // 路径改为根目录下，方便所有用户访问

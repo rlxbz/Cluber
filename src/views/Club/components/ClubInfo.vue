@@ -50,6 +50,8 @@
         </div>
       </div>
     </div>
+
+    <HomeDashboard />
   </div>
 </template>
 
@@ -60,6 +62,7 @@ import { useApplyStore } from "@/stores/applyStore";
 import { ElMessage } from "element-plus";
 import { UserFilled, Calendar, LocationFilled } from "@element-plus/icons-vue";
 
+import HomeDashboard from "./ClubDashboard.vue";
 // 接收父组件传入的社团信息
 const props = defineProps({
   clubInfo: {

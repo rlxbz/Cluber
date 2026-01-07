@@ -27,7 +27,18 @@ export const useSettingStore = defineStore('setting', {
       
       const saved = settingsStorage.get(storageKey)
       if (saved) {
-        this.settings = JSON.parse(saved)
+        // Storage.get() 已经自动解析 JSON，如果返回的是对象直接使用，如果是字符串才需要解析
+        if (typeof saved === 'string') {
+          try {
+            this.settings = JSON.parse(saved)
+          } catch (e) {
+            console.error('解析设置失败，使用默认设置', e)
+            this.settings = { ...DEFAULT_SETTINGS }
+          }
+        } else {
+          // 已经是对象，直接使用
+          this.settings = { ...DEFAULT_SETTINGS, ...saved }
+        }
         this.applySettings() // 立即应用
       }
     },

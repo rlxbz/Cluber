@@ -56,8 +56,8 @@ const route = useRoute();
 const router = useRouter();
 
 const menuList = computed(() => {
-  const token = localStorage.getItem("token");
-  if (!token) {
+  // 统一使用 userStore.isLogin 判断登录状态
+  if (!userStore.isLogin) {
     return [{ path: "/home", label: "首页", iconComponent: HomeIcon }];
   }
 

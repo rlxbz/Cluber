@@ -5,7 +5,8 @@ import { ElMessage } from 'element-plus'
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
-  const token = localStorage.getItem('token')
+  // 从 userStore 中获取 token，而不是直接从 localStorage（因为可能存储在 sessionStorage）
+  const token = userStore.token
 
   // 1. 无需登录的页面（直接放行）
   if (to.meta.requiresAuth === false) {
