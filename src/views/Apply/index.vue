@@ -1,36 +1,58 @@
 <template>
   <div class="apply-container">
     <!-- 页头与返回按钮 -->
-    <el-page-header @back="handleBack" content="申请管理" />
+    <el-page-header @back="handleBack" content="申请中心" />
 
     <!-- 选项卡切换不同申请类型 -->
     <el-tabs v-model="activeTab" class="mt-20">
-      <el-tab-pane label="创建社团申请" name="create" />
-      <el-tab-pane label="加入社团申请" name="join" />
-      <el-tab-pane label="活动举办申请" name="activity" />
+      <el-tab-pane
+        v-for="tab in visibleTabs"
+        :key="tab.name"
+        :label="tab.label"
+        :name="tab.name"
+      />
     </el-tabs>
 
     <!-- 选项卡内容区域 -->
     <div class="tab-content mt-20">
       <ApplyCreate v-if="activeTab === 'create'" />
-      <ApplyJoin v-else-if="activeTab === 'join'" />
       <ApplyActivity v-else-if="activeTab === 'activity'" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useUserStore } from "@/stores/userStore";
 // 导入子组件
 import ApplyCreate from "./components/ApplyCreate.vue";
-import ApplyJoin from "./components/ApplyJoin.vue";
 import ApplyActivity from "./components/ApplyActivity.vue";
 import { ElPageHeader, ElTabs, ElTabPane } from "element-plus";
 
-// 激活的选项卡（默认显示创建社团申请）
+const route = useRoute();
 const activeTab = ref("create");
 const router = useRouter();
+const userStore = useUserStore();
+
+const visibleTabs = computed(() => {
+  if (userStore.role === "club_admin") {
+    return [{ name: "activity", label: "活动申请" }];
+  }
+
+  return [{ name: "create", label: "创建社团申请" }];
+});
+
+const syncActiveTab = () => {
+  const tabNames = visibleTabs.value.map((tab) => tab.name);
+  const preferredTab = route.query.tab;
+  activeTab.value =
+    typeof preferredTab === "string" && tabNames.includes(preferredTab)
+      ? preferredTab
+      : visibleTabs.value[0]?.name || "create";
+};
+
+watch([visibleTabs, () => route.query.tab], syncActiveTab, { immediate: true });
 
 /**
  * 返回上一页

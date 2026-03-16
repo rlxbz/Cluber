@@ -67,19 +67,13 @@ const menuList = computed(() => {
     { path: "/activity", label: "活动中心", iconComponent: CalendarIcon },
     { path: "/notice", label: "公告通知", iconComponent: BellIcon },
     { path: "/member/info", label: "个人中心", iconComponent: UserIcon },
-    { path: "/setting", label: "系统设置", iconComponent: SettingIcon },
+    { path: "/setting", label: "个性化设置", iconComponent: SettingIcon },
   ];
 
-  if (userStore.role === "system_admin") {
-    return [
-      ...baseMenu,
-      { path: "/apply", label: "申请管理", iconComponent: FileTextIcon },
-    ];
-  }
   if (userStore.role === "club_admin") {
     return [
       ...baseMenu,
-      { path: "/apply", label: "申请管理", iconComponent: FileTextIcon },
+      { path: "/apply", label: "社团事务", iconComponent: FileTextIcon },
     ];
   }
   return baseMenu;

@@ -2,7 +2,12 @@
   <div class="activity-page">
     <div class="page-header">
       <h1>活动列表</h1>
-      <el-button type="primary" @click="handleApplyActivity" class="apply-button">
+      <el-button
+        v-if="canManageClubActivities"
+        type="primary"
+        @click="handleApplyActivity"
+        class="apply-button"
+      >
         申请举办活动
       </el-button>
       <el-input
@@ -75,14 +80,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import ActivityItem from "./components/ActivityItem.vue";
 import { getActivityListAPI } from "@/apis/activity";
+import { useUserStore } from "@/stores/userStore";
 import { ElLoading } from "element-plus";
 
 // 路由实例
 const router = useRouter();
+const userStore = useUserStore();
 
 // 页面状态
 const activityList = ref([]);
@@ -95,6 +102,7 @@ const searchKey = ref("");
 const filterStatus = ref("");
 const currentPage = ref(1);
 const pageSize = ref(10);
+const canManageClubActivities = computed(() => userStore.role === "club_admin");
 
 /**
  * 跳转到活动申请页

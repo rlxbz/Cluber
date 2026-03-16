@@ -110,15 +110,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { useApplyStore } from "@/stores/applyStore";
+import { useClubStore } from "@/stores/clubStore";
 import { useUserStore } from "@/stores/userStore";
 // 引入默认头像（避免无头像时布局错乱）
 import AdefaultAvatar from "@/assets/images/default-avatar.png";
 
 // 状态管理
 const applyStore = useApplyStore();
+const clubStore = useClubStore();
 const userStore = useUserStore();
 
 // 筛选与分页参数
@@ -129,15 +131,30 @@ const total = ref(0);
 const isLoading = ref(false);
 const applyList = ref([]);
 const defaultAvatar = ref(AdefaultAvatar); // 默认头像
+const managedClubId = ref(null);
 
 // 是否显示操作按钮（管理员可见）
-const showHandleBtn = ref(userStore.role === "admin" || userStore.role === "clubAdmin");
+const showHandleBtn = computed(() =>
+  ["club_admin", "system_admin"].includes(userStore.role)
+);
 
 // 表格布局：自适应模式（关键）
 // fixed：固定布局（性能好，需手动设宽）；auto：自适应布局（内容决定宽度，适配性好）
 const tableLayout = ref("auto");
 
 // 加载申请列表
+const ensureManagedClubId = async () => {
+  if (managedClubId.value || userStore.role !== "club_admin") {
+    return managedClubId.value;
+  }
+
+  const myClubs = clubStore.myClubs.length
+    ? clubStore.myClubs
+    : await clubStore.getMyClubList();
+  managedClubId.value = myClubs[0]?.id || null;
+  return managedClubId.value;
+};
+
 const loadApplyList = async () => {
   try {
     isLoading.value = true;
@@ -148,10 +165,20 @@ const loadApplyList = async () => {
       status: filterStatus.value || undefined,
     };
 
-    const res =
-      userStore.role === "admin"
-        ? await applyStore.getAdminApplyList({ ...params, type: "join" })
-        : await applyStore.getClubJoinApply(params);
+    let res = { list: [], total: 0 };
+
+    if (userStore.role === "system_admin") {
+      res = await applyStore.getAdminApplyList({ ...params, type: "join" });
+    } else if (userStore.role === "club_admin") {
+      const clubId = await ensureManagedClubId();
+      if (!clubId) {
+        applyList.value = [];
+        total.value = 0;
+        ElMessage.warning("当前暂无可处理的社团申请");
+        return;
+      }
+      res = await applyStore.getClubJoinApply(clubId, params);
+    }
 
     applyList.value = res.list;
     total.value = res.total;
@@ -182,7 +209,7 @@ const refreshList = () => {
 // 批准申请
 const handleApprove = async (id) => {
   try {
-    await applyStore.handleApply(id, { status: "approved", type: "clubJoin" });
+    await applyStore.handleApply(id, { status: "approved", type: "join" });
     ElMessage.success("已批准申请");
     loadApplyList(); // 刷新列表
   } catch (error) {
@@ -193,7 +220,7 @@ const handleApprove = async (id) => {
 // 拒绝申请
 const handleReject = async (id) => {
   try {
-    await applyStore.handleApply(id, { status: "rejected", type: "clubJoin" });
+    await applyStore.handleApply(id, { status: "rejected", type: "join" });
     ElMessage.success("已拒绝申请");
     loadApplyList(); // 刷新列表
   } catch (error) {

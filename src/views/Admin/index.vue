@@ -1,6 +1,6 @@
 <template>
   <div class="system-setting-page">
-    <el-page-header @back="handleBack" content="系统设置" />
+    <el-page-header @back="handleBack" content="个性化设置" />
     <SystemSettingComponent class="setting-content" />
   </div>
 </template>

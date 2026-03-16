@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
-import { loginAPI, getUserInfoAPI } from '@/apis/user'
+import { loginAPI, getUserInfoAPI, updateUserInfoAPI } from '@/apis/user'
 import { ElMessage } from 'element-plus'
 import { Storage, StorageConfig } from '@/utils/storage'
 
 // 确定用户相关数据的存储方式
 const userStorage = Storage[StorageConfig.user.token];
 
-// 模拟的本地用户数据（三个预设身份）
+// 模拟的本地用户数据
+// 前台主角色以 student / club_admin 为主，system_admin 仅保留为兼容测试账号。
 const mockUsers = [
   {
     username: 'student',
@@ -24,7 +25,7 @@ const mockUsers = [
     username: 'sysadmin',
     password: '123456',
     role: 'system_admin',
-    userInfo: { id: 3, name: '系统管理员', role: 'system_admin', avatar: '' }
+    userInfo: { id: 3, name: '系统测试账号', role: 'system_admin', avatar: '' }
   }
 ]
 
@@ -32,7 +33,7 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     token: userStorage.get('token') || '',
     userInfo: userStorage.get('userInfo') || null,
-    role: userStorage.get('role') || '' // 角色：student/club_admin/system_admin
+    role: userStorage.get('role') || '' // 前台主角色：student / club_admin；system_admin 仅保留兼容
   }),
   getters: {
     // 判断是否已登录
@@ -98,25 +99,41 @@ export const useUserStore = defineStore('user', {
     
     // 获取用户信息（本地模拟场景下无需调用接口）
     async getUserInfo() {
-      // 真实接口调用（暂时注释）
-      // try {
-      //   const res = await getUserInfoAPI()
-      //   this.userInfo = res
-      //   this.role = res.role
-      //   userStorage.set('userInfo', this.userInfo)
-      //   userStorage.set('role', this.role)
-      //   return res
-      // } catch (error) {
-      //   ElMessage.error('获取用户信息失败')
-      //   this.logout()
-      //   return null
-      // }
+      if (this.userInfo) {
+        return this.userInfo
+      }
+
+      try {
+        const res = await getUserInfoAPI()
+        const info = res?.data || res || {}
+        this.userInfo = info
+        this.role = info?.role || this.role
+        userStorage.set('userInfo', this.userInfo)
+        userStorage.set('role', this.role)
+        return this.userInfo
+      } catch (error) {
+        ElMessage.error('获取用户信息失败')
+        this.logout()
+        throw error
+      }
     },
     // 更新用户信息
     async updateUserInfo(info) {
       try {
+        if (!this.token || this.token.startsWith('mock_token_')) {
+          this.userInfo = { ...this.userInfo, ...info }
+          userStorage.set('userInfo', this.userInfo)
+          return true
+        }
+
         const res = await updateUserInfoAPI(info)
-        if (res.code === 200) {
+        const updateSucceeded =
+          res !== null &&
+          res !== undefined &&
+          res !== false &&
+          res?.code !== 500 &&
+          res?.success !== false
+        if (updateSucceeded) {
           // 更新本地存储的用户信息
           this.userInfo = { ...this.userInfo, ...info }
           userStorage.set('userInfo', this.userInfo)

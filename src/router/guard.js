@@ -7,15 +7,16 @@ router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   // 从 userStore 中获取 token，而不是直接从 localStorage（因为可能存储在 sessionStorage）
   const token = userStore.token
+  const requiresAuth = to.meta.requiresAuth ?? to.meta.requireAuth ?? false
 
   // 1. 无需登录的页面（直接放行）
-  if (to.meta.requiresAuth === false) {
+  if (requiresAuth === false) {
     next()
     return
   }
 
   // 2. 需要登录的页面（仅拦截requiresAuth: true的路由）
-  if (to.meta.requiresAuth) {
+  if (requiresAuth) {
     if (!token) {
       // 未登录访问受保护路由时，提示并跳转首页（而非强制登录）
       ElMessage.warning('请先登录以使用完整功能')

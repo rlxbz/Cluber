@@ -1,7 +1,7 @@
 <template>
   <div class="club-detail">
     <!-- 社团基本信息 -->
-    <ClubInfo :club="club" />
+    <ClubInfo :club-info="club" />
 
     <!-- 操作按钮区 -->
     <div class="club-actions mt-20">

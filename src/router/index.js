@@ -13,7 +13,7 @@ import Apply from "@/views/Apply/index.vue";
 // 公共元信息配置
 const guestMeta = {
   requiresAuth: false,
-  roles: ["guest", "student", "club_admin", "system_admin"],
+  roles: ["guest", "student", "club_admin"],
 };
 const authMeta = { requiresAuth: true };
 
@@ -52,7 +52,7 @@ const router = createRouter({
         {
           path: "notice",
           component: Notice,
-          meta: { ...authMeta, title: "公告" },
+          meta: { ...authMeta, title: "公告通知" },
         },
         {
           path: "/notice/:id",
@@ -60,7 +60,7 @@ const router = createRouter({
           component: () => import("@/views/Notice/components/Detail.vue"),
           meta: {
             title: "公告详情",
-            requireAuth: true,
+            requiresAuth: true,
           },
         },
         {
@@ -118,7 +118,8 @@ const router = createRouter({
           name: "Apply",
           component: Apply,
           meta: {
-            requiresAuth: true, // 需要登录
+            ...authMeta,
+            title: "申请中心",
           },
         },
       ],

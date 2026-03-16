@@ -1,7 +1,7 @@
 <template>
   <div class="notice-page">
     <div class="page-header">
-      <h2>公告管理</h2>
+      <h2>公告通知</h2>
     </div>
 
     <el-card class="page-content">

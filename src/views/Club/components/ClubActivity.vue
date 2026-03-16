@@ -28,7 +28,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 import { useActivityStore } from "@/stores/activityStore";
 import ActivityItem from "@/views/Activity/components/ActivityItem.vue";
 import { ElMessage } from "element-plus";
@@ -52,7 +52,7 @@ const total = ref(0);
 const activityList = ref([]);
 
 // 路由实例
-const route = useRoute();
+const router = useRouter();
 
 // 获取社团活动列表
 const getClubActivities = async () => {
@@ -78,7 +78,7 @@ const handlePageChange = (page) => {
 
 // 活动项点击事件
 const handleActivityClick = (id) => {
-  route.push(`/activity/${id}`);
+  router.push(`/activity/${id}`);
 };
 
 // 初始化
