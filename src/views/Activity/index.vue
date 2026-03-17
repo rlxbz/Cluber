@@ -8,7 +8,7 @@
         @click="handleApplyActivity"
         class="apply-button"
       >
-        申请举办活动
+        发布本社团活动
       </el-button>
       <el-input
         v-model="searchKey"
@@ -102,10 +102,10 @@ const searchKey = ref("");
 const filterStatus = ref("");
 const currentPage = ref(1);
 const pageSize = ref(10);
-const canManageClubActivities = computed(() => userStore.role === "club_admin");
+const canManageClubActivities = computed(() => userStore.isClubAdmin);
 
 /**
- * 跳转到活动申请页
+ * 跳转到本社团活动发布页
  */
 const handleApplyActivity = () => {
   router.push("/apply?tab=activity");

@@ -3,7 +3,7 @@
   <div class="home-activity">
     <div class="section-title">
       <h2>热门活动</h2>
-      <el-button type="text" @click="$router.push('/activities')">查看全部</el-button>
+      <el-button type="text" @click="$router.push('/activity')">查看全部</el-button>
     </div>
 
     <el-skeleton

@@ -1,9 +1,7 @@
 <template>
   <div class="apply-container">
-    <!-- 页头与返回按钮 -->
-    <el-page-header @back="handleBack" content="申请中心" />
+    <el-page-header @back="handleBack" content="申请服务" />
 
-    <!-- 选项卡切换不同申请类型 -->
     <el-tabs v-model="activeTab" class="mt-20">
       <el-tab-pane
         v-for="tab in visibleTabs"
@@ -13,10 +11,10 @@
       />
     </el-tabs>
 
-    <!-- 选项卡内容区域 -->
     <div class="tab-content mt-20">
-      <ApplyCreate v-if="activeTab === 'create'" />
-      <ApplyActivity v-else-if="activeTab === 'activity'" />
+      <ApplyActivity v-if="activeTab === 'activity'" />
+      <ApplyJoin v-else-if="activeTab === 'join'" />
+      <MemberApply v-else />
     </div>
   </div>
 </template>
@@ -25,22 +23,27 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
-// 导入子组件
-import ApplyCreate from "./components/ApplyCreate.vue";
 import ApplyActivity from "./components/ApplyActivity.vue";
+import ApplyJoin from "./components/ApplyJoin.vue";
+import MemberApply from "@/views/Member/components/MemberApply.vue";
 import { ElPageHeader, ElTabs, ElTabPane } from "element-plus";
 
 const route = useRoute();
-const activeTab = ref("create");
 const router = useRouter();
 const userStore = useUserStore();
+const activeTab = ref("records");
 
 const visibleTabs = computed(() => {
-  if (userStore.role === "club_admin") {
-    return [{ name: "activity", label: "活动申请" }];
+  const tabs = [{ name: "records", label: "我的申请记录" }];
+
+  if (userStore.isClubAdmin) {
+    tabs.unshift(
+      { name: "activity", label: "本社团活动发布" },
+      { name: "join", label: "本社团申请处理" }
+    );
   }
 
-  return [{ name: "create", label: "创建社团申请" }];
+  return tabs;
 });
 
 const syncActiveTab = () => {
@@ -49,14 +52,22 @@ const syncActiveTab = () => {
   activeTab.value =
     typeof preferredTab === "string" && tabNames.includes(preferredTab)
       ? preferredTab
-      : visibleTabs.value[0]?.name || "create";
+      : visibleTabs.value[0]?.name || "records";
 };
 
 watch([visibleTabs, () => route.query.tab], syncActiveTab, { immediate: true });
 
-/**
- * 返回上一页
- */
+watch(activeTab, (tab) => {
+  if (route.query.tab === tab) {
+    return;
+  }
+
+  router.replace({
+    path: "/apply",
+    query: tab === "records" ? {} : { tab },
+  });
+});
+
 const handleBack = () => {
   router.back();
 };
@@ -72,11 +83,5 @@ const handleBack = () => {
   padding: 20px;
   border-radius: 4px;
   min-height: 400px;
-}
-
-.empty-text {
-  text-align: center;
-  padding: 50px 0;
-  color: var(--el-text-color-secondary);
 }
 </style>

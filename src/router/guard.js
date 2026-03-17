@@ -1,56 +1,51 @@
-import router from './index'
-import { useUserStore } from '@/stores/userStore'
-import { ElMessage } from 'element-plus'
-
+import router from "./index";
+import { useUserStore } from "@/stores/userStore";
+import { ElMessage } from "element-plus";
 
 router.beforeEach(async (to, from, next) => {
-  const userStore = useUserStore()
-  // 从 userStore 中获取 token，而不是直接从 localStorage（因为可能存储在 sessionStorage）
-  const token = userStore.token
-  const requiresAuth = to.meta.requiresAuth ?? to.meta.requireAuth ?? false
+  const userStore = useUserStore();
+  const token = userStore.token;
+  const requiresAuth = to.meta.requiresAuth ?? to.meta.requireAuth ?? false;
 
-  // 1. 无需登录的页面（直接放行）
+  if ((to.path === "/login" || to.path === "/register") && token) {
+    next(userStore.defaultFrontRoute);
+    return;
+  }
+
   if (requiresAuth === false) {
-    next()
-    return
+    next();
+    return;
   }
 
-  // 2. 需要登录的页面（仅拦截requiresAuth: true的路由）
-  if (requiresAuth) {
-    if (!token) {
-      // 未登录访问受保护路由时，提示并跳转首页（而非强制登录）
-      ElMessage.warning('请先登录以使用完整功能')
-      next('/home')
-      return
-    }
+  if (!token) {
+    ElMessage.warning("请先登录以使用完整功能");
+    next("/home");
+    return;
+  }
 
-    // 已登录但未获取用户信息（刷新场景）
-    if (!userStore.userInfo) {
-      try {
-        await userStore.getUserInfo()
-      } catch (error) {
-        userStore.logout()
-        next('/home')
-        return
-      }
-    }
-
-    // 3. 权限校验（基于角色）
-    if (to.meta.roles && !to.meta.roles.includes(userStore.role)) {
-      ElMessage.error('无权限访问该页面')
-      next('/home')
-      return
+  if (!userStore.userInfo) {
+    try {
+      await userStore.getUserInfo();
+    } catch (error) {
+      userStore.logout();
+      next("/home");
+      return;
     }
   }
 
-  // 4. 所有校验通过（包括未登录访问首页）
-  next()
-})
+  if (to.meta.roles?.length && !userStore.hasRouteAccess(to.meta.roles)) {
+    ElMessage.error("当前账号暂无该页面访问权限");
+    next(userStore.defaultFrontRoute);
+    return;
+  }
+
+  next();
+});
 
 router.afterEach((to) => {
   if (to.meta.title) {
-    document.title = `Cluber - ${to.meta.title}`
+    document.title = `Cluber - ${to.meta.title}`;
   }
-})
+});
 
-export default router
+export default router;

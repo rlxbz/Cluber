@@ -1,9 +1,11 @@
 <template>
   <div class="member-apply">
     <el-card shadow="hover" class="page-card">
-      <div slot="header" class="card-header">
+      <template #header>
+        <div class="card-header">
         <span class="header-title">我的申请记录</span>
-      </div>
+        </div>
+      </template>
 
       <div v-if="loading" class="loading-container">
         <el-loading-spinner />
@@ -22,8 +24,8 @@
         <el-table-column prop="title" label="申请标题" />
         <el-table-column prop="type" label="申请类型" width="120">
           <template #default="scope">
-            <el-tag :type="scope.row.type === 'join' ? 'info' : 'primary'">
-              {{ scope.row.type === "join" ? "加入社团" : "创建社团" }}
+            <el-tag :type="getApplyTypeTag(scope.row.type)">
+              {{ formatApplyType(scope.row.type) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -43,8 +45,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useApplyStore } from "@/stores/applyStore";
-import { ElMessage, ElTag, ElEmpty, ElAlert, ElLoading } from "element-plus";
-import dayjs from "dayjs";
+import { ElMessage } from "element-plus";
 
 // 初始化 store
 const applyStore = useApplyStore();
@@ -53,6 +54,30 @@ const applyStore = useApplyStore();
 const applyList = ref([]);
 const loading = ref(false);
 const error = ref("");
+
+const formatApplyType = (type) => {
+  const typeMap = {
+    join: "加入社团",
+    join_club: "加入社团",
+    create: "创建社团",
+    create_club: "创建社团",
+    activity: "活动发布",
+  };
+
+  return typeMap[type] || "其他申请";
+};
+
+const getApplyTypeTag = (type) => {
+  const typeMap = {
+    join: "info",
+    join_club: "info",
+    create: "primary",
+    create_club: "primary",
+    activity: "success",
+  };
+
+  return typeMap[type] || "info";
+};
 
 // 格式化状态文本
 const formatStatus = (status) => {

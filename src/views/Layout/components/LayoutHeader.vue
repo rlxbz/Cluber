@@ -9,6 +9,7 @@
           <span class="user-name">{{ userInfo?.name || "用户" }}</span>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item @click="toPreferences">页面偏好</el-dropdown-item>
               <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -40,6 +41,10 @@ const userInfo = computed(() => userStore.userInfo);
 
 const toLogin = () => {
   router.push("/login");
+};
+
+const toPreferences = () => {
+  router.push("/preferences");
 };
 
 const handleLogout = () => {

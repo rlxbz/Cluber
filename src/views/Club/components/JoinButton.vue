@@ -18,10 +18,11 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useApplyStore } from "@/stores/applyStore";
 import { useClubStore } from "@/stores/clubStore";
+import { useUserStore } from "@/stores/userStore";
 import { ElMessage } from "element-plus";
 import CommonButton from "@/components/common/Button/index.vue";
 
@@ -32,29 +33,28 @@ const clubId = route.params.id;
 // 状态管理
 const applyStore = useApplyStore();
 const clubStore = useClubStore();
+const userStore = useUserStore();
 
 // 状态变量
 const applyLoading = ref(false);
 const hasApplied = ref(false);
 const isMember = ref(false);
+const normalizedClubId = computed(() => String(clubId));
 
 // 检查是否已申请或已是成员
 const checkApplyStatus = async () => {
   try {
-    // 获取用户申请列表
     await applyStore.getUserApplyList();
-    // 检查是否有该社团的申请
     hasApplied.value = applyStore.applyList.some(
       (item) =>
-        item.clubId === clubId &&
-        item.type === "join" &&
-        ["pending", "reviewing"].includes(item.status)
+        (item.type === "join" || item.type === "join_club") &&
+        String(item.clubId ?? item.targetId ?? "") === normalizedClubId.value &&
+        item.status === "pending"
     );
 
-    // 检查是否已是社团成员
     if (clubStore.currentClub) {
-      isMember.value = clubStore.currentClub.members.some(
-        (member) => member.id === clubStore.currentUser.id
+      isMember.value = (clubStore.currentClub.members || []).some(
+        (member) => member.id === userStore.userInfo?.id
       );
     }
   } catch (err) {
@@ -68,7 +68,7 @@ const handleJoinClub = async () => {
   try {
     await applyStore.applyJoinClub({
       clubId,
-      applyReason: "我希望加入这个社团，参与社团活动", // 可以改为从输入框获取
+      applyReason: "我希望加入这个社团，参与社团活动",
     });
 
     ElMessage.success("申请已提交，请等待社团管理员审核");
@@ -88,7 +88,6 @@ onMounted(() => {
   if (clubStore.currentClub) {
     checkApplyStatus();
   } else {
-    // 如果社团信息未加载，则先加载
     clubStore.getClubDetail(clubId).then(checkApplyStatus);
   }
 });

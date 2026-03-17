@@ -33,7 +33,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, provide } from "vue";
+import { ref, onMounted, onUnmounted, provide, watch } from "vue";
+import { useRoute } from "vue-router";
 import LayoutHeader from "./components/LayoutHeader.vue";
 import LayoutSidebar from "./components/LayoutSidebar.vue";
 import LayoutFooter from "./components/LayoutFooter.vue";
@@ -42,6 +43,7 @@ import { Menu } from "@element-plus/icons-vue";
 // 响应式状态管理
 const isMobile = ref(false);
 const showMobileMenu = ref(false);
+const route = useRoute();
 
 // 检测屏幕尺寸
 const checkScreenSize = () => {
@@ -68,6 +70,15 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("resize", checkScreenSize);
 });
+
+watch(
+  () => route.fullPath,
+  () => {
+    if (isMobile.value) {
+      showMobileMenu.value = false;
+    }
+  }
+);
 
 provide("isMobile", isMobile);
 provide("showMobileMenu", showMobileMenu);

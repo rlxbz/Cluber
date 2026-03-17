@@ -1,6 +1,6 @@
 <template>
-  <div class="system-setting-page">
-    <el-page-header @back="handleBack" content="个性化设置" />
+  <div class="preferences-page">
+    <el-page-header @back="handleBack" content="页面偏好" />
     <SystemSettingComponent class="setting-content" />
   </div>
 </template>
@@ -18,7 +18,7 @@ const handleBack = () => {
 </script>
 
 <style scoped>
-.system-setting-page {
+.preferences-page {
   padding: 20px;
 }
 

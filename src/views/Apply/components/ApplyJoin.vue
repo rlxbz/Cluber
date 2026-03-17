@@ -1,10 +1,9 @@
 <template>
   <el-card>
-    <div slot="header">
-      <span>加入社团申请管理</span>
-    </div>
+    <template #header>
+      <span>本社团入社申请处理</span>
+    </template>
 
-    <!-- 筛选区域 -->
     <div class="filter-bar mb-10">
       <el-select
         v-model="filterStatus"
@@ -13,27 +12,23 @@
         @change="handleFilterChange"
         style="width: 180px"
       >
-        <el-option label="待审核" value="pending" />
+        <el-option label="待处理" value="pending" />
         <el-option label="已通过" value="approved" />
         <el-option label="已拒绝" value="rejected" />
       </el-select>
 
-      <el-button type="primary" icon="Refresh" @click="refreshList"> 刷新 </el-button>
+      <el-button type="primary" icon="Refresh" @click="refreshList">刷新</el-button>
     </div>
 
-    <!-- 申请列表：开启自适应列宽，移除不必要的固定width -->
     <el-table
       :data="applyList"
       border
       style="width: 100%"
       v-loading="isLoading"
-      :fit="true"
-      :table-layout="tableLayout"
+      table-layout="auto"
     >
-      <!-- 申请ID：最小宽度+自适应 -->
       <el-table-column prop="id" label="申请ID" min-width="80" />
 
-      <!-- 申请人：最小宽度+内容自适应 -->
       <el-table-column label="申请人" min-width="140">
         <template #default="scope">
           <div class="applicant-info">
@@ -43,13 +38,9 @@
         </template>
       </el-table-column>
 
-      <!-- 社团名称：最小宽度+自适应（内容长时会自动扩展） -->
       <el-table-column prop="clubName" label="社团名称" min-width="160" />
-
-      <!-- 申请时间：固定最小宽度（格式固定，无需扩展） -->
       <el-table-column prop="applyTime" label="申请时间" min-width="170" />
 
-      <!-- 状态：固定最小宽度（内容固定） -->
       <el-table-column label="状态" min-width="110">
         <template #default="scope">
           <el-tag
@@ -63,7 +54,7 @@
           >
             {{
               scope.row.status === "pending"
-                ? "待审核"
+                ? "待处理"
                 : scope.row.status === "approved"
                 ? "已通过"
                 : "已拒绝"
@@ -72,7 +63,6 @@
         </template>
       </el-table-column>
 
-      <!-- 操作：固定最小宽度（按钮数量固定） -->
       <el-table-column label="操作" min-width="180" v-if="showHandleBtn">
         <template #default="scope">
           <el-button
@@ -81,7 +71,7 @@
             @click="handleApprove(scope.row.id)"
             v-if="scope.row.status === 'pending'"
           >
-            批准
+            通过
           </el-button>
           <el-button
             size="small"
@@ -96,7 +86,6 @@
       </el-table-column>
     </el-table>
 
-    <!-- 分页 -->
     <div class="pagination mt-10">
       <el-pagination
         v-model:current-page="page"
@@ -110,41 +99,30 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import { useApplyStore } from "@/stores/applyStore";
 import { useClubStore } from "@/stores/clubStore";
 import { useUserStore } from "@/stores/userStore";
-// 引入默认头像（避免无头像时布局错乱）
-import AdefaultAvatar from "@/assets/images/default-avatar.png";
+import defaultAvatarImage from "@/assets/images/default-avatar.png";
 
-// 状态管理
 const applyStore = useApplyStore();
 const clubStore = useClubStore();
 const userStore = useUserStore();
 
-// 筛选与分页参数
 const filterStatus = ref("");
 const page = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
 const isLoading = ref(false);
 const applyList = ref([]);
-const defaultAvatar = ref(AdefaultAvatar); // 默认头像
+const defaultAvatar = ref(defaultAvatarImage);
 const managedClubId = ref(null);
 
-// 是否显示操作按钮（管理员可见）
-const showHandleBtn = computed(() =>
-  ["club_admin", "system_admin"].includes(userStore.role)
-);
+const showHandleBtn = computed(() => userStore.isClubAdmin);
 
-// 表格布局：自适应模式（关键）
-// fixed：固定布局（性能好，需手动设宽）；auto：自适应布局（内容决定宽度，适配性好）
-const tableLayout = ref("auto");
-
-// 加载申请列表
 const ensureManagedClubId = async () => {
-  if (managedClubId.value || userStore.role !== "club_admin") {
+  if (managedClubId.value) {
     return managedClubId.value;
   }
 
@@ -156,97 +134,75 @@ const ensureManagedClubId = async () => {
 };
 
 const loadApplyList = async () => {
+  if (!userStore.isClubAdmin) {
+    applyList.value = [];
+    total.value = 0;
+    return;
+  }
+
   try {
     isLoading.value = true;
-    // 根据用户角色获取不同列表
-    const params = {
+
+    const clubId = await ensureManagedClubId();
+    if (!clubId) {
+      applyList.value = [];
+      total.value = 0;
+      ElMessage.warning("当前暂无可处理的本社团申请");
+      return;
+    }
+
+    const res = await applyStore.getClubJoinApplications(clubId, {
       page: page.value,
       size: pageSize.value,
       status: filterStatus.value || undefined,
-    };
+    });
 
-    let res = { list: [], total: 0 };
-
-    if (userStore.role === "system_admin") {
-      res = await applyStore.getAdminApplyList({ ...params, type: "join" });
-    } else if (userStore.role === "club_admin") {
-      const clubId = await ensureManagedClubId();
-      if (!clubId) {
-        applyList.value = [];
-        total.value = 0;
-        ElMessage.warning("当前暂无可处理的社团申请");
-        return;
-      }
-      res = await applyStore.getClubJoinApply(clubId, params);
-    }
-
-    applyList.value = res.list;
-    total.value = res.total;
+    applyList.value = res.list || [];
+    total.value = res.total || 0;
   } catch (error) {
-    ElMessage.error("获取申请列表失败：" + error.message);
+    ElMessage.error("获取本社团申请失败：" + error.message);
   } finally {
     isLoading.value = false;
   }
 };
 
-// 筛选条件变化时重新加载列表
 const handleFilterChange = () => {
   page.value = 1;
   loadApplyList();
 };
 
-// 分页变化时重新加载列表
-const handlePageChange = (val) => {
-  page.value = val;
+const handlePageChange = (value) => {
+  page.value = value;
   loadApplyList();
 };
 
-// 刷新列表
 const refreshList = () => {
   loadApplyList();
 };
 
-// 批准申请
 const handleApprove = async (id) => {
   try {
-    await applyStore.handleApply(id, { status: "approved", type: "join" });
-    ElMessage.success("已批准申请");
-    loadApplyList(); // 刷新列表
+    await applyStore.handleClubJoinApplication(id, "approved");
+    ElMessage.success("已通过该申请");
+    loadApplyList();
   } catch (error) {
     ElMessage.error("操作失败：" + error.message);
   }
 };
 
-// 拒绝申请
 const handleReject = async (id) => {
   try {
-    await applyStore.handleApply(id, { status: "rejected", type: "join" });
-    ElMessage.success("已拒绝申请");
-    loadApplyList(); // 刷新列表
+    await applyStore.handleClubJoinApplication(id, "rejected");
+    ElMessage.success("已拒绝该申请");
+    loadApplyList();
   } catch (error) {
     ElMessage.error("操作失败：" + error.message);
   }
 };
 
-// 页面加载时初始化列表
 onMounted(() => {
   loadApplyList();
 });
-
-// 监听窗口大小变化，重新渲染表格（可选，增强适配性）
-watch(
-  () => window.innerWidth,
-  () => {
-    if (applyList.value.length > 0) {
-      // 延迟执行，避免频繁触发
-      setTimeout(() => {
-        const table = document.querySelector(".el-table__body-wrapper");
-        if (table) table.scrollLeft = 0; // 重置滚动条
-      }, 100);
-    }
-  },
-  { immediate: false, deep: false }
-);
 </script>
 
 <style scoped>
@@ -254,7 +210,7 @@ watch(
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap; /* 筛选栏自适应，避免窗口变窄时溢出 */
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -262,14 +218,14 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap; /* 申请人名称不换行 */
-  overflow: hidden; /* 超出部分隐藏（配合min-width避免布局错乱） */
-  text-overflow: ellipsis; /* 超出部分显示省略号 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .applicant-name {
   font-size: 14px;
-  max-width: 80px; /* 名称最大宽度，避免过长导致列宽异常 */
+  max-width: 80px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -279,12 +235,10 @@ watch(
   text-align: right;
 }
 
-/* 适配小屏幕：表格横向滚动时不挤压容器 */
 ::v-deep(.el-table__body-wrapper) {
   overflow-x: auto;
 }
 
-/* 按钮间距优化（避免小屏幕时按钮重叠） */
 ::v-deep(.el-button.ml-2) {
   margin-left: 8px !important;
 }

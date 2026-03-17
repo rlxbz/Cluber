@@ -2,7 +2,7 @@
   <!-- 保持原有UI不变 -->
   <el-card class="system-setting-card">
     <div slot="header">
-      <h2 class="setting-title">个性化设置</h2>
+      <h2 class="setting-title">页面偏好</h2>
     </div>
 
     <div class="setting-section">

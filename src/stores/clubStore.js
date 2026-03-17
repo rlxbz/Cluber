@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import request from "@/utils/http";
 import {
   getClubListAPI,
   getClubDetailAPI,
@@ -15,6 +16,10 @@ export const useClubStore = defineStore("club", {
     loading: false,
     error: null,
     total: 0,
+    currentPage: 1,
+    pageSize: 10,
+    searchKey: "",
+    category: "",
   }),
   actions: {
     // 获取社团列表

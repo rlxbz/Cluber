@@ -77,7 +77,12 @@ watch(category, (newVal) => {
 
 // 同时修正初始化加载逻辑
 const loadClubList = async () => {
-  const result = await clubStore.getClubList();
+  const result = await clubStore.getClubList({
+    page: clubStore.currentPage,
+    size: clubStore.pageSize,
+    searchKey: searchKey.value,
+    category: category.value,
+  });
   clubList.value = result.list || [];
 };
 
@@ -89,7 +94,10 @@ const handleSearch = async () => {
   loading.value = true;
   try {
     const result = await clubStore.getClubList({
+      page: clubStore.currentPage,
+      size: clubStore.pageSize,
       searchKey: searchKey.value,
+      category: category.value,
     });
     // 正确提取接口返回的 list 数组（而非整个 result 对象）
     clubList.value = result.list || [];

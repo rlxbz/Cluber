@@ -63,8 +63,8 @@ const isMember = computed(() => {
 
 // 检查当前用户是否已申请加入
 const hasApplied = computed(() => {
-  if (!applyStore.userApplies || !props.club.id) return false;
-  return applyStore.userApplies.some(
+  if (!applyStore.applyList || !props.club.id) return false;
+  return applyStore.applyList.some(
     (apply) =>
       apply.type === "join_club" &&
       apply.targetId === props.club.id &&

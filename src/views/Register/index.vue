@@ -55,6 +55,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import { ElMessage } from 'element-plus'
 
 // 表单数据
 const registerForm = ref({
@@ -103,7 +104,7 @@ const handleRegister = async () => {
   try {
     await registerFormRef.value.validate()
     const res = await userStore.register(registerForm.value)
-    if (res.code === 200) {
+    if (res) {
       ElMessage.success('注册成功，即将跳转登录页')
       setTimeout(() => {
         router.push('/login')

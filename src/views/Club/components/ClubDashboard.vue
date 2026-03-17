@@ -1,11 +1,11 @@
 <template>
-  <div class="dashboard-wrapper">
+  <div class="club-overview-wrapper">
     <el-row :gutter="20" class="chart-row">
       <el-col :xs="24" :lg="16" class="mb-20">
         <el-card shadow="hover" class="chart-card">
           <template #header>
             <div class="card-header">
-              <span>社团活跃趋势</span>
+              <span>本社团活动趋势</span>
             </div>
           </template>
           <div ref="lineChartRef" class="chart-box"></div>
@@ -16,7 +16,7 @@
         <el-card shadow="hover" class="chart-card">
           <template #header>
             <div class="card-header">
-              <span>👥 成员年级分布</span>
+              <span>成员年级分布</span>
             </div>
           </template>
           <div ref="pieChartRef" class="chart-box"></div>
@@ -27,27 +27,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import * as echarts from "echarts";
 
-// --- 1. 数据定义 (模拟后端返回) ---
-const stats = reactive({
-  clubCount: 12,
-  memberCount: 1204,
-  activityCount: 8,
-  pendingAudit: 3,
-});
-
-// --- 2. ECharts 初始化逻辑 ---
 const lineChartRef = ref(null);
 const pieChartRef = ref(null);
 let lineChartInstance = null;
 let pieChartInstance = null;
 
 const initCharts = () => {
-  if (!lineChartRef.value || !pieChartRef.value) return;
+  if (!lineChartRef.value || !pieChartRef.value) {
+    return;
+  }
 
-  // A. 折线图配置
   lineChartInstance = echarts.init(lineChartRef.value);
   lineChartInstance.setOption({
     tooltip: { trigger: "axis" },
@@ -82,7 +74,6 @@ const initCharts = () => {
     ],
   });
 
-  // B. 饼图配置
   pieChartInstance = echarts.init(pieChartRef.value);
   pieChartInstance.setOption({
     tooltip: { trigger: "item" },
@@ -114,13 +105,11 @@ const initCharts = () => {
   });
 };
 
-// --- 3. 窗口缩放自适应 ---
 const handleResize = () => {
   lineChartInstance?.resize();
   pieChartInstance?.resize();
 };
 
-// --- 4. 生命周期 ---
 onMounted(() => {
   nextTick(() => {
     initCharts();
@@ -139,13 +128,16 @@ onUnmounted(() => {
 .chart-row {
   margin-top: 20px;
 }
+
 .mb-20 {
   margin-bottom: 20px;
 }
+
 .chart-box {
   height: 350px;
   width: 100%;
 }
+
 .card-header {
   font-weight: bold;
   font-size: 16px;

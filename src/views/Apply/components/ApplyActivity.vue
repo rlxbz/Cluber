@@ -1,7 +1,7 @@
 <template>
   <el-card>
     <div slot="header">
-      <span>活动举办申请</span>
+      <span>本社团活动发布</span>
     </div>
 
     <el-form
@@ -65,7 +65,7 @@
       <!-- 提交按钮 -->
       <el-form-item>
         <el-button type="primary" @click="submitForm" :loading="isSubmitting">
-          提交申请
+          提交发布
         </el-button>
       </el-form-item>
     </el-form>
@@ -147,7 +147,7 @@ const submitForm = async () => {
     // 调用API提交申请
     await applyActivityAPI(activityForm);
 
-    ElMessage.success("活动举办申请提交成功，等待审核");
+    ElMessage.success("活动发布信息已提交");
     resetForm(); // 重置表单
   } catch (error) {
     if (error.name !== "ValidationError") {

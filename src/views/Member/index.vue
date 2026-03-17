@@ -3,7 +3,7 @@
     <!-- 顶部导航菜单 -->
     <div class="member-nav">
       <el-menu
-        default-active="info"
+        :default-active="activeMenu"
         class="member-menu"
         mode="horizontal"
         @select="handleMenuSelect"
@@ -31,10 +31,13 @@
 </template>
 
 <script setup>
-import { useRouter } from "vue-router";
+import { computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { User, Collection, Ticket } from "@element-plus/icons-vue";
 
+const route = useRoute();
 const router = useRouter();
+const activeMenu = computed(() => route.path.split("/")[2] || "info");
 
 // 处理菜单选择
 const handleMenuSelect = (index) => {

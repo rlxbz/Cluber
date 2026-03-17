@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <el-card class="login-card">
-      <h2 class="login-title">Cluber系统登录</h2>
+      <h2 class="login-title">Cluber 前台登录</h2>
       <el-form 
         ref="loginFormRef" 
         :model="loginForm" 

@@ -1,6 +1,5 @@
 <template>
   <aside class="app-sidebar" :class="{ mobile: isMobile }">
-    <!-- 移动端关闭按钮 -->
     <div class="mobile-close" @click="handleClose" v-if="isMobile">
       <el-icon :size="20"><Close /></el-icon>
     </div>
@@ -12,12 +11,10 @@
       @select="handleMenuSelect"
       :collapse="isMobile && !showMobileMenu"
     >
-      <!-- 菜单内容保持不变 -->
       <el-menu-item
         v-for="item in menuList"
-        :key="item.path"
-        :index="item.path"
-        :route="item.path"
+        :key="item.key"
+        :index="item.key"
       >
         <component :is="item.iconComponent" class="el-icon" />
         <span>{{ item.label }}</span>
@@ -37,55 +34,69 @@ import {
   Document as FileTextIcon,
   Bell as BellIcon,
   User as UserIcon,
-  Setting as SettingIcon,
+  Collection as CollectionIcon,
+  Tickets as TicketsIcon,
   Close,
 } from "@element-plus/icons-vue";
 
-// 接收来自父组件的响应式状态
 const isMobile = inject("isMobile", ref(false));
 const showMobileMenu = inject("showMobileMenu", ref(false));
 const toggleMobileMenu = inject("toggleMobileMenu", () => {});
+
+const userStore = useUserStore();
+const route = useRoute();
+const router = useRouter();
+
+const iconMap = {
+  home: HomeIcon,
+  club: SchoolIcon,
+  activity: CalendarIcon,
+  apply: FileTextIcon,
+  notice: BellIcon,
+  profile: UserIcon,
+  clubService: CollectionIcon,
+  clubApply: TicketsIcon,
+};
+
+const menuList = computed(() =>
+  userStore.frontVisibleMenus.map((item) => ({
+    ...item,
+    iconComponent: iconMap[item.icon] || FileTextIcon,
+  }))
+);
+
+const activeMenu = computed(() => {
+  if (route.path.startsWith("/member")) {
+    return route.path === "/member/club" && userStore.isClubAdmin
+      ? "/member/club"
+      : "/member/info";
+  }
+
+  if (route.path === "/apply") {
+    if (route.query.tab === "join") {
+      return "/apply?tab=join";
+    }
+
+    if (route.query.tab === "activity") {
+      return "/apply";
+    }
+  }
+
+  return route.meta.activeMenu || route.meta.menuKey || route.path;
+});
 
 const handleClose = () => {
   toggleMobileMenu();
 };
 
-// 原有逻辑保持不变
-const userStore = useUserStore();
-const route = useRoute();
-const router = useRouter();
-
-const menuList = computed(() => {
-  // 统一使用 userStore.isLogin 判断登录状态
-  if (!userStore.isLogin) {
-    return [{ path: "/home", label: "首页", iconComponent: HomeIcon }];
+const handleMenuSelect = (key) => {
+  const selectedMenu = menuList.value.find((item) => item.key === key);
+  if (!selectedMenu) {
+    return;
   }
 
-  const baseMenu = [
-    { path: "/home", label: "首页", iconComponent: HomeIcon },
-    { path: "/club", label: "社团列表", iconComponent: SchoolIcon },
-    { path: "/activity", label: "活动中心", iconComponent: CalendarIcon },
-    { path: "/notice", label: "公告通知", iconComponent: BellIcon },
-    { path: "/member/info", label: "个人中心", iconComponent: UserIcon },
-    { path: "/setting", label: "个性化设置", iconComponent: SettingIcon },
-  ];
+  router.push(selectedMenu.path);
 
-  if (userStore.role === "club_admin") {
-    return [
-      ...baseMenu,
-      { path: "/apply", label: "社团事务", iconComponent: FileTextIcon },
-    ];
-  }
-  return baseMenu;
-});
-
-const activeMenu = computed(() => {
-  return route.path;
-});
-
-const handleMenuSelect = (index) => {
-  router.push(index);
-  // 移动端选中后关闭菜单
   if (isMobile.value) {
     toggleMobileMenu();
   }
@@ -93,7 +104,6 @@ const handleMenuSelect = (index) => {
 </script>
 
 <style scoped>
-/* 原有样式保持不变 */
 .app-sidebar {
   width: 220px;
   background-color: #fff;
@@ -117,7 +127,6 @@ const handleMenuSelect = (index) => {
   margin-right: 10px;
 }
 
-/* 移动端样式 */
 .mobile {
   width: 260px;
   min-height: calc(100vh - 60px);

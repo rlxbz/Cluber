@@ -16,6 +16,7 @@
     </div>
 
     <ClubMember
+      class="club-member-section"
       v-if="isManager && club?.id"
       :club-id="club.id"
       @member-updated="fetchClubDetail"
@@ -46,9 +47,7 @@ const club = ref({});
 
 // 获取社团详情
 const fetchClubDetail = async () => {
-  console.log("clubId:", clubId); // 检查ID是否正确
   club.value = await clubStore.getClubDetail(clubId);
-  console.log("club数据:", club.value); // 检查数据是否完整
 };
 
 const isMember = computed(
@@ -62,8 +61,8 @@ const isManager = computed(
 
 // 检查当前用户是否已申请加入
 const hasApplied = computed(() => {
-  if (!applyStore.userApplies || !clubId) return false;
-  return applyStore.userApplies.some(
+  if (!applyStore.applyList || !clubId) return false;
+  return applyStore.applyList.some(
     (apply) =>
       apply.type === "join_club" &&
       apply.targetId === clubId &&

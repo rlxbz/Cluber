@@ -5,17 +5,28 @@ import Register from "@/views/Register/index.vue";
 import Home from "@/views/Home/index.vue";
 import Club from "@/views/Club/index.vue";
 import Notice from "@/views/Notice/index.vue";
-import NoticeDetail from "@/views/Notice/components/Detail.vue";
 import Push from "@/views/Push/index.vue";
-import PushDetail from "@/views/Push/components/Detail.vue";
 import Apply from "@/views/Apply/index.vue";
 
-// 公共元信息配置
-const guestMeta = {
-  requiresAuth: false,
-  roles: ["guest", "student", "club_admin"],
-};
-const authMeta = { requiresAuth: true };
+const GUEST_FRONT_ROLES = ["guest", "student", "club_admin", "sys_admin"];
+const FRONT_ROLES = ["student", "club_admin", "sys_admin"];
+const CLUB_SERVICE_ROLES = ["club_admin"];
+
+const createRouteMeta = ({
+  title,
+  roles = FRONT_ROLES,
+  hidden = false,
+  requiresAuth = true,
+  menuKey = "",
+  activeMenu = "",
+}) => ({
+  title,
+  roles,
+  hidden,
+  requiresAuth,
+  menuKey,
+  activeMenu: activeMenu || menuKey,
+});
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,104 +34,161 @@ const router = createRouter({
     {
       path: "/",
       component: Layout,
-      meta: { requiresAuth: false },
+      meta: { requiresAuth: false, hidden: true },
       children: [
         {
           path: "",
-          component: Home,
-          meta: {
-            ...guestMeta,
-            title: "首页",
-          },
+          redirect: "/home",
+          meta: { requiresAuth: false, hidden: true },
         },
         {
           path: "home",
+          name: "front-home",
           component: Home,
-          meta: { ...guestMeta, title: "首页" },
+          meta: createRouteMeta({
+            title: "首页",
+            roles: GUEST_FRONT_ROLES,
+            requiresAuth: false,
+            menuKey: "/home",
+          }),
         },
         {
           path: "club",
+          name: "club-square",
           component: Club,
-          meta: { ...authMeta, title: "社团列表" },
+          meta: createRouteMeta({
+            title: "社团",
+            menuKey: "/club",
+          }),
         },
         {
-          // 添加社团详情页路由
           path: "club/:id",
-          component: () => import("@/views/Club/components/Detail.vue"), // 懒加载组件
-          meta: { ...authMeta, title: "社团详情" },
-        },
-        {
-          path: "notice",
-          component: Notice,
-          meta: { ...authMeta, title: "公告通知" },
-        },
-        {
-          path: "/notice/:id",
-          name: "NoticeDetail",
-          component: () => import("@/views/Notice/components/Detail.vue"),
-          meta: {
-            title: "公告详情",
-            requiresAuth: true,
-          },
-        },
-        {
-          path: "noticeDetail",
-          component: NoticeDetail,
-          meta: { ...authMeta, title: "公告详情" },
-        },
-        {
-          path: "/push",
-          component: Push,
-          meta: { ...authMeta, title: "推送" },
-        },
-        {
-          path: "/push/:id",
-          component: PushDetail,
-          meta: { ...authMeta, title: "推送详情" },
+          name: "club-detail",
+          component: () => import("@/views/Club/components/Detail.vue"),
+          meta: createRouteMeta({
+            title: "社团详情",
+            hidden: true,
+            activeMenu: "/club",
+          }),
         },
         {
           path: "activity",
+          name: "activity-square",
           component: () => import("@/views/Activity/index.vue"),
-          meta: { ...authMeta, title: "活动列表" },
+          meta: createRouteMeta({
+            title: "活动",
+            menuKey: "/activity",
+          }),
         },
         {
           path: "activity/:id",
+          name: "activity-detail",
           component: () => import("@/views/Activity/components/Detail.vue"),
-          meta: { ...authMeta, title: "活动详情" },
+          meta: createRouteMeta({
+            title: "活动详情",
+            hidden: true,
+            activeMenu: "/activity",
+          }),
+        },
+        {
+          path: "apply",
+          name: "application-service",
+          component: Apply,
+          meta: createRouteMeta({
+            title: "申请服务",
+            menuKey: "/apply",
+          }),
+        },
+        {
+          path: "notice",
+          name: "notice-list",
+          component: Notice,
+          meta: createRouteMeta({
+            title: "公告",
+            menuKey: "/notice",
+          }),
+        },
+        {
+          path: "notice/:id",
+          name: "notice-detail",
+          component: () => import("@/views/Notice/components/Detail.vue"),
+          meta: createRouteMeta({
+            title: "公告详情",
+            hidden: true,
+            activeMenu: "/notice",
+          }),
+        },
+        {
+          path: "notice-detail",
+          name: "legacy-notice-detail",
+          component: () => import("@/views/Notice/components/Detail.vue"),
+          meta: createRouteMeta({
+            title: "公告详情",
+            hidden: true,
+            activeMenu: "/notice",
+          }),
+        },
+        {
+          path: "push",
+          name: "club-feed",
+          component: Push,
+          meta: createRouteMeta({
+            title: "社团动态",
+            hidden: true,
+            menuKey: "/push",
+          }),
+        },
+        {
+          path: "push/:id",
+          name: "club-feed-detail",
+          component: () => import("@/views/Push/components/Detail.vue"),
+          meta: createRouteMeta({
+            title: "社团动态详情",
+            hidden: true,
+            activeMenu: "/push",
+          }),
         },
         {
           path: "member",
+          name: "member-center",
           component: () => import("@/views/Member/index.vue"),
-          meta: { ...authMeta, title: "个人中心" },
+          redirect: "/member/info",
+          meta: createRouteMeta({
+            title: "个人中心",
+            menuKey: "/member/info",
+          }),
           children: [
             {
               path: "info",
-              component: () =>
-                import("@/views/Member/components/MemberInfo.vue"),
-              meta: { ...authMeta, title: "个人信息" },
+              name: "member-profile",
+              component: () => import("@/views/Member/components/MemberInfo.vue"),
+              meta: createRouteMeta({
+                title: "个人资料",
+                hidden: true,
+                activeMenu: "/member/info",
+              }),
             },
             {
               path: "club",
-              component: () =>
-                import("@/views/Member/components/MemberClub.vue"),
-              meta: { ...authMeta, title: "我的社团" },
+              name: "member-clubs",
+              component: () => import("@/views/Member/components/MemberClub.vue"),
+              meta: createRouteMeta({
+                title: "我的社团",
+                hidden: true,
+                activeMenu: "/member/info",
+              }),
             },
             {
               path: "apply",
-              component: () =>
-                import("@/views/Member/components/MemberApply.vue"),
-              meta: { ...authMeta, title: "我的申请" },
+              name: "member-applications",
+              component: () => import("@/views/Member/components/MemberApply.vue"),
+              meta: createRouteMeta({
+                title: "我的申请",
+                hidden: true,
+                activeMenu: "/member/info",
+              }),
             },
           ],
-        },
-        {
-          path: "/apply",
-          name: "Apply",
-          component: Apply,
-          meta: {
-            ...authMeta,
-            title: "申请中心",
-          },
         },
       ],
     },
@@ -128,23 +196,37 @@ const router = createRouter({
       path: "/register",
       name: "register",
       component: Register,
-      meta: { requiresAuth: false },
+      meta: { requiresAuth: false, hidden: true, title: "注册" },
     },
     {
       path: "/login",
-      name: "Login",
+      name: "login",
       component: Login,
-      meta: { requiresAuth: false },
-      // beforeEnter 已由 guard.js 统一处理，这里移除避免重复检查
+      meta: { requiresAuth: false, hidden: true, title: "登录" },
     },
     {
-      path: "/setting", // 路径改为根目录下，方便所有用户访问
-      name: "personalSetting",
+      path: "/preferences",
+      alias: "/setting",
+      name: "front-preferences",
       component: () => import("@/views/Admin/index.vue"),
-      meta: {
-        title: "个性化设置",
-        requiresAuth: false, // 允许未登录用户也能访问（使用默认设置）
-      },
+      meta: createRouteMeta({
+        title: "页面偏好",
+        roles: FRONT_ROLES,
+        hidden: true,
+        requiresAuth: true,
+        menuKey: "/preferences",
+      }),
+    },
+    {
+      path: "/club-service",
+      redirect: "/member/club",
+      meta: createRouteMeta({
+        title: "我的社团",
+        roles: CLUB_SERVICE_ROLES,
+        hidden: true,
+        requiresAuth: true,
+        menuKey: "/member/club",
+      }),
     },
   ],
 });
