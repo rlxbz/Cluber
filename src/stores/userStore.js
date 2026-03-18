@@ -8,12 +8,16 @@ import {
 import { ElMessage } from "element-plus";
 import { Storage, StorageConfig } from "@/utils/storage";
 
-const userStorage = Storage[StorageConfig.user.token];
+const tokenStorage = Storage[StorageConfig.user.token];
+const userInfoStorage = Storage[StorageConfig.user.userInfo];
+const roleStorage = Storage[StorageConfig.user.role];
 
 const ROLE_STUDENT = "student";
 const ROLE_CLUB_ADMIN = "club_admin";
 const ROLE_SYS_ADMIN = "sys_admin";
 const FRONT_ROLE_LIST = [ROLE_STUDENT, ROLE_CLUB_ADMIN, ROLE_SYS_ADMIN];
+const DEFAULT_FRONT_ROUTE = "/home";
+const AUTH_PAGE_LIST = ["/login", "/register"];
 
 const normalizeRole = (role) => {
   if (role === "system_admin") {
@@ -22,6 +26,15 @@ const normalizeRole = (role) => {
 
   return role || "";
 };
+
+const DEFAULT_FRONT_ROUTE_MAP = {
+  [ROLE_STUDENT]: DEFAULT_FRONT_ROUTE,
+  [ROLE_CLUB_ADMIN]: "/apply?tab=activity",
+  [ROLE_SYS_ADMIN]: "/preferences",
+};
+
+const getDefaultRouteByRole = (role) =>
+  DEFAULT_FRONT_ROUTE_MAP[normalizeRole(role)] || DEFAULT_FRONT_ROUTE;
 
 const mockUsers = [
   {
@@ -56,6 +69,18 @@ const mockUsers = [
   },
 ];
 
+const getMockUserByRole = (role) =>
+  mockUsers.find((user) => user.role === normalizeRole(role));
+
+const getMockUserByToken = (token) => {
+  if (!token || !token.startsWith("mock_token_")) {
+    return null;
+  }
+
+  const role = normalizeRole(token.replace("mock_token_", ""));
+  return getMockUserByRole(role);
+};
+
 const createFrontMenus = ({ isLoggedIn, isClubAdmin }) => {
   if (!isLoggedIn) {
     return [{ key: "/home", path: "/home", label: "首页", icon: "home" }];
@@ -84,9 +109,9 @@ const createFrontMenus = ({ isLoggedIn, isClubAdmin }) => {
 
 export const useUserStore = defineStore("user", {
   state: () => ({
-    token: userStorage.get("token") || "",
-    userInfo: userStorage.get("userInfo") || null,
-    role: normalizeRole(userStorage.get("role") || ""),
+    token: tokenStorage.get("token") || "",
+    userInfo: userInfoStorage.get("userInfo") || null,
+    role: normalizeRole(roleStorage.get("role") || ""),
   }),
   getters: {
     isLogin: (state) => !!state.token,
@@ -113,9 +138,21 @@ export const useUserStore = defineStore("user", {
         isClubAdmin: this.isClubAdmin,
       });
     },
-    defaultFrontRoute: () => "/home",
+    defaultFrontRoute() {
+      return getDefaultRouteByRole(this.normalizedRole);
+    },
   },
   actions: {
+    clearSession() {
+      this.token = "";
+      this.userInfo = null;
+      this.role = "";
+
+      tokenStorage.remove("token");
+      userInfoStorage.remove("userInfo");
+      roleStorage.remove("role");
+    },
+
     persistSession(token, userInfo, role) {
       const normalizedRole = normalizeRole(role);
 
@@ -123,9 +160,27 @@ export const useUserStore = defineStore("user", {
       this.userInfo = userInfo ? { ...userInfo, role: normalizedRole } : null;
       this.role = normalizedRole;
 
-      userStorage.set("token", this.token);
-      userStorage.set("userInfo", this.userInfo);
-      userStorage.set("role", this.role);
+      tokenStorage.set("token", this.token);
+      userInfoStorage.set("userInfo", this.userInfo);
+      roleStorage.set("role", this.role);
+    },
+
+    getDefaultRouteByRole(role = this.normalizedRole) {
+      return getDefaultRouteByRole(role);
+    },
+
+    resolveLoginTarget(redirect, allowRedirect = true) {
+      const fallbackRoute = this.getDefaultRouteByRole(this.normalizedRole);
+
+      if (!allowRedirect || typeof redirect !== "string" || !redirect.startsWith("/")) {
+        return fallbackRoute;
+      }
+
+      if (AUTH_PAGE_LIST.some((path) => redirect.startsWith(path))) {
+        return fallbackRoute;
+      }
+
+      return redirect;
     },
 
     hasRouteAccess(roles = []) {
@@ -159,7 +214,7 @@ export const useUserStore = defineStore("user", {
           throw new Error("登录返回缺少 token");
         }
 
-        userStorage.set("token", token);
+        tokenStorage.set("token", token);
         this.token = token;
         await this.getUserInfo();
         ElMessage.success("登录成功");
@@ -205,23 +260,61 @@ export const useUserStore = defineStore("user", {
       return true;
     },
 
-    logout() {
-      this.token = "";
-      this.userInfo = null;
-      this.role = "";
+    async restoreSession() {
+      const token = tokenStorage.get("token") || this.token;
 
-      userStorage.remove("token");
-      userStorage.remove("userInfo");
-      userStorage.remove("role");
+      if (!token) {
+        this.clearSession();
+        return false;
+      }
+
+      const storedUserInfo = userInfoStorage.get("userInfo");
+      const storedRole = normalizeRole(roleStorage.get("role") || storedUserInfo?.role || this.role);
+
+      this.token = token;
+      this.role = storedRole;
+      this.userInfo = storedUserInfo
+        ? { ...storedUserInfo, role: normalizeRole(storedUserInfo.role || storedRole) }
+        : null;
+
+      if (this.userInfo) {
+        this.role = normalizeRole(this.userInfo.role || this.role);
+        userInfoStorage.set("userInfo", this.userInfo);
+      }
+
+      if (this.role) {
+        roleStorage.set("role", this.role);
+      }
+
+      if (!this.userInfo || !this.role) {
+        try {
+          await this.getUserInfo();
+        } catch (error) {
+          this.clearSession();
+          return false;
+        }
+      }
+
+      return true;
+    },
+
+    logout() {
+      this.clearSession();
     },
 
     async getUserInfo() {
-      if (this.userInfo) {
+      if (this.userInfo && (this.userInfo.role || this.role)) {
         const normalizedRole = normalizeRole(this.userInfo.role || this.role);
         this.userInfo = { ...this.userInfo, role: normalizedRole };
         this.role = normalizedRole;
-        userStorage.set("userInfo", this.userInfo);
-        userStorage.set("role", this.role);
+        userInfoStorage.set("userInfo", this.userInfo);
+        roleStorage.set("role", this.role);
+        return this.userInfo;
+      }
+
+      const mockUser = getMockUserByToken(this.token);
+      if (mockUser) {
+        this.persistSession(this.token, mockUser.userInfo, mockUser.role);
         return this.userInfo;
       }
 
@@ -232,12 +325,12 @@ export const useUserStore = defineStore("user", {
 
         this.userInfo = { ...info, role: normalizedRole };
         this.role = normalizedRole;
-        userStorage.set("userInfo", this.userInfo);
-        userStorage.set("role", this.role);
+        userInfoStorage.set("userInfo", this.userInfo);
+        roleStorage.set("role", this.role);
         return this.userInfo;
       } catch (error) {
         ElMessage.error("获取用户信息失败");
-        this.logout();
+        this.clearSession();
         throw error;
       }
     },
@@ -246,7 +339,7 @@ export const useUserStore = defineStore("user", {
       try {
         if (!this.token || this.token.startsWith("mock_token_")) {
           this.userInfo = { ...this.userInfo, ...info, role: this.normalizedRole };
-          userStorage.set("userInfo", this.userInfo);
+          userInfoStorage.set("userInfo", this.userInfo);
           return true;
         }
 
@@ -260,7 +353,7 @@ export const useUserStore = defineStore("user", {
 
         if (updateSucceeded) {
           this.userInfo = { ...this.userInfo, ...info, role: this.normalizedRole };
-          userStorage.set("userInfo", this.userInfo);
+          userInfoStorage.set("userInfo", this.userInfo);
           return true;
         }
 

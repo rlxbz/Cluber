@@ -43,7 +43,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 
 // 表单数据
@@ -68,9 +68,22 @@ const loginRules = ref({
 const loginFormRef = ref(null)
 // 路由实例
 const router = useRouter()
+const route = useRoute()
 // 用户Store
 const userStore = useUserStore()
 
+const getRedirectTarget = () => {
+  const redirect = Array.isArray(route.query.redirect)
+    ? route.query.redirect[0]
+    : route.query.redirect
+  const target = userStore.resolveLoginTarget(redirect)
+  const resolvedTarget = router.resolve(target)
+  const hasMatchedRoute = resolvedTarget.matched.length > 0
+  const hasAccess =
+    !resolvedTarget.meta.roles?.length || userStore.hasRouteAccess(resolvedTarget.meta.roles)
+
+  return hasMatchedRoute && hasAccess ? target : userStore.defaultFrontRoute
+}
 
 // 新增：跳转到注册页
 const toRegister = () => {
@@ -86,9 +99,7 @@ const handleLogin = async () => {
   // 调用登录方法
   const success = await userStore.login(loginForm.value)
   if (success) {
-    // 登录成功跳转首页
-    router.push('/home')
-    
+    router.replace(getRedirectTarget())
   }
 }
 </script>

@@ -4,10 +4,14 @@ import { ElMessage } from "element-plus";
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
-  const token = userStore.token;
   const requiresAuth = to.meta.requiresAuth ?? to.meta.requireAuth ?? false;
+  const isAuthPage = to.path === "/login" || to.path === "/register";
 
-  if ((to.path === "/login" || to.path === "/register") && token) {
+  if (userStore.token && (!userStore.userInfo || !userStore.normalizedRole)) {
+    await userStore.restoreSession();
+  }
+
+  if (isAuthPage && userStore.isLogin) {
     next(userStore.defaultFrontRoute);
     return;
   }
@@ -17,20 +21,13 @@ router.beforeEach(async (to, from, next) => {
     return;
   }
 
-  if (!token) {
+  if (!userStore.isLogin) {
     ElMessage.warning("请先登录以使用完整功能");
-    next("/home");
+    next({
+      path: "/login",
+      query: { redirect: to.fullPath },
+    });
     return;
-  }
-
-  if (!userStore.userInfo) {
-    try {
-      await userStore.getUserInfo();
-    } catch (error) {
-      userStore.logout();
-      next("/home");
-      return;
-    }
   }
 
   if (to.meta.roles?.length && !userStore.hasRouteAccess(to.meta.roles)) {
