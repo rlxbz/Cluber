@@ -10,31 +10,40 @@
         </div>
       </template>
 
-      <div v-if="loading" class="loading-container">
-        <el-loading-spinner />
-      </div>
+      <FrontLoadingState
+        v-if="loading"
+        compact
+        title="社团服务加载中"
+        description="正在整理与你有关的社团信息。"
+      />
 
-      <div v-else-if="error" class="error-message">
-        <el-alert title="加载失败" :description="error" type="error" show-icon />
-      </div>
+      <FrontErrorState
+        v-else-if="error"
+        compact
+        :description="error"
+        @retry="fetchMyClubs"
+      />
 
-      <div v-else-if="clubList.length === 0" class="no-data">
-        <el-empty :description="emptyDescription" />
-      </div>
+      <FrontEmptyState
+        v-else-if="clubList.length === 0"
+        compact
+        :title="isClubAdminView ? '还没有可服务的社团' : '还没有加入社团'"
+        :description="emptyDescription"
+      />
 
-      <div v-else-if="isClubAdminView" class="club-grid manage-grid">
+      <div v-else-if="isClubAdminView" class="club-grid service-grid">
         <div v-for="club in clubList" :key="club.id" class="manage-card">
           <div class="manage-card__header">
             <h3 class="manage-card__title">{{ club.name || "未命名社团" }}</h3>
-            <span class="manage-card__tag">管理中</span>
+            <span class="manage-card__tag">社团服务</span>
           </div>
 
           <div class="manage-card__meta">
-            {{ club.category || club.type || "社团管理员" }}
+            {{ club.category || club.type || "社团信息待补充" }}
           </div>
 
           <div class="manage-card__desc">
-            <p>{{ club.description || "进入社团详情后可继续处理成员管理与入社申请事务。" }}</p>
+            <p>{{ club.description || "进入社团主页后可以继续查看成员名单、近期活动和申请处理情况。" }}</p>
           </div>
 
           <div class="manage-card__footer">
@@ -45,10 +54,10 @@
 
             <div class="manage-card__actions">
               <el-button size="small" @click="handleViewDetail(club.id)">
-                查看详情
+                查看社团主页
               </el-button>
               <el-button size="small" type="primary" @click="handleManageMembers(club.id)">
-                管理成员
+                查看成员服务
               </el-button>
               <el-button
                 size="small"
@@ -56,7 +65,7 @@
                 plain
                 @click="handleReviewApplications(club.id)"
               >
-                处理申请
+                回复入社申请
               </el-button>
             </div>
           </div>
@@ -74,6 +83,10 @@ import { useRouter } from "vue-router";
 import ClubList from "@/views/Club/components/ClubList.vue";
 import { useClubStore } from "@/stores/clubStore";
 import { useUserStore } from "@/stores/userStore";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import { getErrorMessage } from "@/utils/frontBusiness";
 
 const clubStore = useClubStore();
 const userStore = useUserStore();
@@ -84,9 +97,11 @@ const error = ref("");
 const clubList = ref([]);
 
 const isClubAdminView = computed(() => userStore.frontPermissions.canManageOwnClub);
-const pageTitle = computed(() => (isClubAdminView.value ? "我管理的社团" : "我的社团"));
+const pageTitle = computed(() => (isClubAdminView.value ? "我的社团服务" : "我的社团"));
 const emptyDescription = computed(() =>
-  isClubAdminView.value ? "当前暂无可管理的社团" : "暂无加入的社团"
+  isClubAdminView.value
+    ? "当前还没有你需要处理服务事项的社团。"
+    : "加入社团后，这里会展示你参与的社团和相关入口。"
 );
 
 const fetchMyClubs = async () => {
@@ -96,7 +111,7 @@ const fetchMyClubs = async () => {
     clubList.value = clubs || [];
     error.value = "";
   } catch (err) {
-    error.value = err.message || "获取社团列表失败，请重试";
+    error.value = getErrorMessage(err, "获取社团列表失败，请重试");
     clubList.value = [];
   } finally {
     loading.value = false;
@@ -154,28 +169,18 @@ onMounted(() => {
   color: var(--text-light-color);
 }
 
-.loading-container {
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.error-message {
-  margin: 20px 0;
-}
-
-.no-data {
-  padding: 50px 0;
-  text-align: center;
-}
-
 .manage-card {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 15px;
   transition: all 0.3s;
   background-color: #fff;
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 .manage-card:hover {
@@ -199,8 +204,8 @@ onMounted(() => {
 .manage-card__tag {
   font-size: 12px;
   padding: 2px 8px;
-  background-color: #ecfdf3;
-  color: #15803d;
+  background-color: #eef6ff;
+  color: #2563eb;
   border-radius: 12px;
   white-space: nowrap;
 }

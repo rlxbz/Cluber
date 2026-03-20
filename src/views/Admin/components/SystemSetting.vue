@@ -2,11 +2,11 @@
   <!-- 保持原有UI不变 -->
   <el-card class="system-setting-card">
     <div slot="header">
-      <h2 class="setting-title">页面偏好</h2>
+      <h2 class="setting-title">界面偏好</h2>
     </div>
 
     <div class="setting-section">
-      <h3 class="section-title">颜色主题</h3>
+      <h3 class="section-title">主题风格</h3>
       <div class="theme-colors">
         <div
           v-for="(theme, index) in themeList"
@@ -20,7 +20,7 @@
     </div>
 
     <div class="setting-section">
-      <h3 class="section-title">字体大小</h3>
+      <h3 class="section-title">文字大小</h3>
       <el-slider
         v-model="settingStore.settings.fontSize"
         :min="12"
@@ -34,7 +34,7 @@
     </div>
 
     <div class="setting-section">
-      <h3 class="section-title">字体类型</h3>
+      <h3 class="section-title">字体样式</h3>
       <el-select
         v-model="settingStore.settings.fontFamily"
         placeholder="选择字体"
@@ -105,7 +105,7 @@ const handleFontSizeChange = (size) => {
 // 字体类型修改
 const handleFontFamilyChange = (family) => {
   settingStore.updateSetting("fontFamily", family);
-  ElMessage.success("字体类型已更新");
+  ElMessage.success("字体样式已更新");
 };
 </script>
 

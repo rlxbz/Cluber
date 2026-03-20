@@ -211,7 +211,7 @@ const router = createRouter({
       name: "front-preferences",
       component: () => import("@/views/Admin/index.vue"),
       meta: createRouteMeta({
-        title: "页面偏好",
+        title: "界面偏好",
         roles: FRONT_ROLE_LIST,
         hidden: true,
         requiresAuth: true,

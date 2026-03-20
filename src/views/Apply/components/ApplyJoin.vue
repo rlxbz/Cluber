@@ -1,13 +1,18 @@
 <template>
-  <el-card>
+  <el-card class="apply-join-card">
     <template #header>
-      <span>本社团入社申请记录</span>
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">本社团申请处理</h3>
+          <p class="card-desc">查看近期想加入社团的同学，并及时给出回复。</p>
+        </div>
+      </div>
     </template>
 
     <div class="filter-bar mb-10">
       <el-select
         v-model="filterStatus"
-        placeholder="请选择状态"
+        placeholder="筛选申请状态"
         clearable
         @change="handleFilterChange"
         style="width: 180px"
@@ -17,10 +22,33 @@
         <el-option label="已拒绝" value="rejected" />
       </el-select>
 
-      <el-button type="primary" icon="Refresh" @click="refreshList">刷新</el-button>
+      <el-button type="primary" icon="Refresh" @click="refreshList">刷新列表</el-button>
     </div>
 
-    <el-table :data="applyList" stripe style="width: 100%" v-loading="isLoading" table-layout="auto">
+    <FrontLoadingState
+      v-if="isLoading"
+      compact
+      title="申请列表加载中"
+      description="正在整理与你社团相关的入社申请。"
+    />
+
+    <FrontErrorState
+      v-else-if="error"
+      compact
+      :description="error"
+      @retry="loadApplyList"
+    />
+
+    <FrontEmptyState
+      v-else-if="applyList.length === 0"
+      compact
+      title="暂时没有待处理申请"
+      :description="emptyText"
+      action-text="重新加载"
+      @action="loadApplyList"
+    />
+
+    <el-table v-else :data="applyList" stripe style="width: 100%" table-layout="auto">
       <el-table-column label="申请人" min-width="140">
         <template #default="scope">
           <div class="applicant-info">
@@ -30,8 +58,8 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="clubName" label="社团名称" min-width="160" />
-      <el-table-column prop="applyTime" label="申请时间" min-width="170" />
+      <el-table-column prop="clubName" label="申请社团" min-width="160" />
+      <el-table-column prop="applyTime" label="提交时间" min-width="170" />
 
       <el-table-column label="状态" min-width="110">
         <template #default="scope">
@@ -39,7 +67,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" min-width="180" v-if="showHandleBtn">
+      <el-table-column label="处理" min-width="180" v-if="showHandleBtn">
         <template #default="scope">
           <el-button
             size="small"
@@ -62,7 +90,7 @@
       </el-table-column>
     </el-table>
 
-    <div class="pagination mt-10">
+    <div v-if="total > 0" class="pagination mt-10">
       <el-pagination
         v-model:current-page="page"
         v-model:page-size="pageSize"
@@ -82,6 +110,10 @@ import { useClubStore } from "@/stores/clubStore";
 import { useUserStore } from "@/stores/userStore";
 import defaultAvatarImage from "@/assets/images/default-avatar.png";
 import ApplyStatusTag from "@/components/business/ApplyStatusTag.vue";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import { getErrorMessage } from "@/utils/frontBusiness";
 
 const applyStore = useApplyStore();
 const clubStore = useClubStore();
@@ -93,11 +125,15 @@ const pageSize = ref(10);
 const total = ref(0);
 const isLoading = ref(false);
 const applyList = ref([]);
+const error = ref("");
 const defaultAvatar = ref(defaultAvatarImage);
 const managedClubId = ref(null);
 
 const showHandleBtn = computed(() =>
   userStore.frontPermissions.canReviewClubJoinApplications
+);
+const emptyText = computed(() =>
+  managedClubId.value ? "目前还没有新的入社申请。" : "你当前还没有可处理申请的社团。"
 );
 
 const ensureManagedClubId = async () => {
@@ -116,17 +152,18 @@ const loadApplyList = async () => {
   if (!userStore.can("canReviewClubJoinApplications")) {
     applyList.value = [];
     total.value = 0;
+    error.value = "";
     return;
   }
 
   try {
     isLoading.value = true;
+    error.value = "";
 
     const clubId = await ensureManagedClubId();
     if (!clubId) {
       applyList.value = [];
       total.value = 0;
-      ElMessage.warning("当前暂无可处理的本社团申请");
       return;
     }
 
@@ -139,7 +176,9 @@ const loadApplyList = async () => {
     applyList.value = res.list || [];
     total.value = res.total || 0;
   } catch (error) {
-    ElMessage.error("获取本社团申请失败：" + error.message);
+    applyList.value = [];
+    total.value = 0;
+    error.value = getErrorMessage(error, "获取本社团申请失败，请稍后重试");
   } finally {
     isLoading.value = false;
   }
@@ -193,6 +232,29 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.apply-join-card {
+  border-radius: 12px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.card-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.card-desc {
+  margin: 0;
+  color: var(--text-light-color);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .filter-bar {
   display: flex;
   justify-content: space-between;

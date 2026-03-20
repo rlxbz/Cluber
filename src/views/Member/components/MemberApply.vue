@@ -3,21 +3,30 @@
     <el-card shadow="hover" class="page-card">
       <template #header>
         <div class="card-header">
-        <span class="header-title">我的申请记录</span>
+          <span class="header-title">我的申请记录</span>
         </div>
       </template>
 
-      <div v-if="loading" class="loading-container">
-        <el-loading-spinner />
-      </div>
+      <FrontLoadingState
+        v-if="loading"
+        compact
+        title="申请记录加载中"
+        description="正在整理你提交过的申请。"
+      />
 
-      <div v-else-if="error" class="error-message">
-        <el-alert title="加载失败" :description="error" type="error" show-icon />
-      </div>
+      <FrontErrorState
+        v-else-if="error"
+        compact
+        :description="error"
+        @retry="loadApplyList"
+      />
 
-      <div v-else-if="applyList.length === 0" class="no-data">
-        <el-empty description="暂无申请记录" />
-      </div>
+      <FrontEmptyState
+        v-else-if="applyList.length === 0"
+        compact
+        title="还没有申请记录"
+        description="你提交过的入社或活动申请会展示在这里。"
+      />
 
       <el-table v-else :data="applyList" stripe>
         <el-table-column prop="title" label="申请内容" min-width="220">
@@ -50,9 +59,11 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useApplyStore } from "@/stores/applyStore";
-import { ElMessage } from "element-plus";
 import ApplyStatusTag from "@/components/business/ApplyStatusTag.vue";
-import { formatApplyType, getApplyTypeTagType } from "@/utils/frontBusiness";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import { getErrorMessage, formatApplyType, getApplyTypeTagType } from "@/utils/frontBusiness";
 
 const applyStore = useApplyStore();
 
@@ -67,8 +78,7 @@ const loadApplyList = async () => {
     applyList.value = res.list || [];
     error.value = "";
   } catch (err) {
-    error.value = err.message || "获取申请列表失败";
-    ElMessage.error(error.value);
+    error.value = getErrorMessage(err, "获取申请列表失败，请稍后重试");
   } finally {
     loading.value = false;
   }
@@ -80,20 +90,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 补充样式 */
-.loading-container {
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.error-message {
-  margin: 20px 0;
-}
-
-.no-data {
-  padding: 50px 0;
-  text-align: center;
-}
 </style>

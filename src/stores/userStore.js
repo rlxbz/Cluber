@@ -59,9 +59,9 @@ const FRONT_ROLE_META = {
   },
   [ROLE_SYS_ADMIN]: {
     key: ROLE_SYS_ADMIN,
-    label: "系统测试账号",
+    label: "体验账号",
     homeRoute: "/preferences",
-    description: "仅保留开发和测试使用的弱入口。",
+    description: "仅保留界面体验与调试用的轻入口。",
     isCoreFrontRole: false,
     hasWeakEntryOnly: true,
   },
@@ -100,7 +100,7 @@ const FRONT_MENU_CATALOG = {
   "/apply?tab=join": {
     key: "/apply?tab=join",
     path: "/apply?tab=join",
-    label: "社团申请处理",
+    label: "入社申请回复",
     icon: "clubApply",
     permission: "canReviewClubJoinApplications",
   },
@@ -260,7 +260,7 @@ const mockUsers = [
     userInfo: normalizeUserInfo({
       id: 3,
       username: "sysadmin",
-      name: "系统测试账号",
+      name: "体验账号",
       role: ROLE_SYS_ADMIN,
     }),
   },

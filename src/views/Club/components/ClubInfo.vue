@@ -48,16 +48,15 @@
       </div>
     </div>
 
-    <ClubOverview />
+    <ClubOverviewPanel />
   </div>
 </template>
 
 <script setup>
 import { computed } from "vue";
-import { useClubStore } from "@/stores/clubStore";
 import { UserFilled, Calendar, LocationFilled } from "@element-plus/icons-vue";
 
-import ClubOverview from "./ClubDashboard.vue";
+import ClubOverviewPanel from "./ClubDashboard.vue";
 import JoinButton from "./JoinButton.vue";
 // 接收父组件传入的社团信息
 const props = defineProps({
@@ -67,8 +66,6 @@ const props = defineProps({
   },
 });
 
-// 状态管理
-const clubStore = useClubStore();
 const defaultLogo = "https://cube.elemecdn.com/3/7c/3ea6beec64348aa67243e5c931.jpeg";
 
 // 计算属性：根据社团等级返回标签类型

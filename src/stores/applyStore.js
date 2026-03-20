@@ -16,7 +16,9 @@ let userApplyListPromise = null;
 
 export const useApplyStore = defineStore("apply", {
   state: () => ({
-    applyList: [],
+    userApplyList: [],
+    clubJoinApplications: [],
+    activityApplications: [],
     currentApply: null,
     loading: false,
     error: null,
@@ -24,7 +26,7 @@ export const useApplyStore = defineStore("apply", {
   }),
   getters: {
     hasPendingClubJoinApply: (state) => (clubId) =>
-      state.applyList.some((item) => isPendingClubJoinApply(item, clubId)),
+      state.userApplyList.some((item) => isPendingClubJoinApply(item, clubId)),
   },
 
   actions: {
@@ -37,7 +39,7 @@ export const useApplyStore = defineStore("apply", {
         const clubId = normalizeId(data?.clubId ?? data?.targetId);
 
         if (clubId && !this.hasPendingClubJoinApply(clubId)) {
-          this.applyList = [
+          this.userApplyList = [
             {
               id: `local-join-${clubId}-${Date.now()}`,
               type: "join_club",
@@ -47,7 +49,7 @@ export const useApplyStore = defineStore("apply", {
               title: "入社申请",
               createTime: new Date().toISOString(),
             },
-            ...this.applyList,
+            ...this.userApplyList,
           ];
         }
 
@@ -99,7 +101,7 @@ export const useApplyStore = defineStore("apply", {
 
       try {
         const res = await getUserApplyListAPI(params);
-        this.applyList = res.data?.list || [];
+        this.userApplyList = res.data?.list || [];
         this.userApplyLoaded = true;
         return res.data || { list: [], total: 0 };
       } catch (error) {
@@ -116,8 +118,8 @@ export const useApplyStore = defineStore("apply", {
 
       if (!force && !hasParams && this.userApplyLoaded) {
         return {
-          list: this.applyList,
-          total: this.applyList.length,
+          list: this.userApplyList,
+          total: this.userApplyList.length,
         };
       }
 
@@ -147,9 +149,10 @@ export const useApplyStore = defineStore("apply", {
 
       try {
         const res = await getClubJoinApplyAPI(clubId, params);
-        this.applyList = res.data?.list || [];
+        this.clubJoinApplications = res.data?.list || [];
         return res.data || { list: [], total: 0 };
       } catch (error) {
+        this.clubJoinApplications = [];
         this.error = error.message || "获取本社团入社申请失败";
         console.error(this.error);
         throw error;
@@ -164,9 +167,10 @@ export const useApplyStore = defineStore("apply", {
 
       try {
         const res = await getActivityApplyListAPI(params);
-        this.applyList = res.data?.list || [];
+        this.activityApplications = res.data?.list || [];
         return res.data || { list: [], total: 0 };
       } catch (error) {
+        this.activityApplications = [];
         this.error = error.message || "获取活动申请列表失败";
         console.error(this.error);
         throw error;
@@ -185,19 +189,23 @@ export const useApplyStore = defineStore("apply", {
 
       try {
         let res;
+        let targetListKey = "";
 
         if (data.type === "join") {
           res = await handleClubJoinApplyAPI(id, data);
+          targetListKey = "clubJoinApplications";
         } else if (data.type === "activity") {
           res = await handleActivityApplyAPI(id, data);
+          targetListKey = "activityApplications";
         } else {
           throw new Error("不支持的申请类型");
         }
 
-        const applyIndex = this.applyList.findIndex((item) => item.id === id);
+        const targetList = this[targetListKey] || [];
+        const applyIndex = targetList.findIndex((item) => item.id === id);
         if (applyIndex !== -1) {
-          this.applyList[applyIndex] = {
-            ...this.applyList[applyIndex],
+          this[targetListKey][applyIndex] = {
+            ...targetList[applyIndex],
             ...(res.data || {}),
             status: data.status,
           };

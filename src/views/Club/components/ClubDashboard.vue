@@ -1,145 +1,155 @@
 <template>
-  <div class="club-overview-wrapper">
-    <el-row :gutter="20" class="chart-row">
-      <el-col :xs="24" :lg="16" class="mb-20">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="card-header">
-              <span>本社团活动趋势</span>
-            </div>
-          </template>
-          <div ref="lineChartRef" class="chart-box"></div>
-        </el-card>
-      </el-col>
+  <section class="club-overview">
+    <div class="overview-header">
+      <div>
+        <h3 class="overview-title">社团概览</h3>
+        <p class="overview-desc">快速了解这个社团的日常氛围、活动节奏和加入方式。</p>
+      </div>
+    </div>
 
-      <el-col :xs="24" :lg="8" class="mb-20">
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <div class="card-header">
-              <span>成员年级分布</span>
-            </div>
-          </template>
-          <div ref="pieChartRef" class="chart-box"></div>
-        </el-card>
-      </el-col>
-    </el-row>
-  </div>
+    <div class="overview-grid">
+      <article v-for="item in overviewItems" :key="item.label" class="overview-card">
+        <span class="overview-card__label">{{ item.label }}</span>
+        <strong class="overview-card__value">{{ item.value }}</strong>
+        <p class="overview-card__desc">{{ item.description }}</p>
+      </article>
+    </div>
+
+    <div class="overview-notes">
+      <article class="overview-note">
+        <h4>加入前可以先看看</h4>
+        <p>{{ joinTip }}</p>
+      </article>
+      <article class="overview-note">
+        <h4>活动参与节奏</h4>
+        <p>{{ activityTip }}</p>
+      </article>
+    </div>
+  </section>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
-import * as echarts from "echarts";
+import { computed } from "vue";
+import { useClubStore } from "@/stores/clubStore";
 
-const lineChartRef = ref(null);
-const pieChartRef = ref(null);
-let lineChartInstance = null;
-let pieChartInstance = null;
+const clubStore = useClubStore();
 
-const initCharts = () => {
-  if (!lineChartRef.value || !pieChartRef.value) {
-    return;
+const currentClub = computed(() => clubStore.currentClub || {});
+
+const overviewItems = computed(() => [
+  {
+    label: "成员规模",
+    value: `${currentClub.value.memberCount || 0} 人`,
+    description: "社团当前登记成员数量。",
+  },
+  {
+    label: "活动数量",
+    value: `${currentClub.value.activityCount || 0} 场`,
+    description: "公开可见的活动累计数量。",
+  },
+  {
+    label: "社团类别",
+    value: currentClub.value.category || currentClub.value.type || "待补充",
+    description: "方便你快速判断是否符合兴趣方向。",
+  },
+]);
+
+const joinTip = computed(
+  () =>
+    currentClub.value.description ||
+    "先浏览社团简介、近期活动和负责人信息，再决定是否提交入社申请。"
+);
+
+const activityTip = computed(() => {
+  const activityCount = Number(currentClub.value.activityCount || 0);
+
+  if (activityCount > 0) {
+    return `目前可见活动约 ${activityCount} 场，进入下方活动列表即可继续了解详细安排。`;
   }
 
-  lineChartInstance = echarts.init(lineChartRef.value);
-  lineChartInstance.setOption({
-    tooltip: { trigger: "axis" },
-    grid: { left: "3%", right: "4%", bottom: "3%", top: "15%", containLabel: true },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: ["1月", "2月", "3月", "4月", "5月", "6月"],
-      axisLine: { lineStyle: { color: "#909399" } },
-    },
-    yAxis: {
-      type: "value",
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { lineStyle: { type: "dashed", color: "#E4E7ED" } },
-    },
-    series: [
-      {
-        name: "活动热度",
-        type: "line",
-        smooth: true,
-        showSymbol: false,
-        itemStyle: { color: "#409EFF" },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(64,158,255,0.4)" },
-            { offset: 1, color: "rgba(64,158,255,0.01)" },
-          ]),
-        },
-        data: [120, 132, 101, 134, 290, 230],
-      },
-    ],
-  });
-
-  pieChartInstance = echarts.init(pieChartRef.value);
-  pieChartInstance.setOption({
-    tooltip: { trigger: "item" },
-    legend: { bottom: "0%", icon: "circle" },
-    series: [
-      {
-        name: "年级分布",
-        type: "pie",
-        radius: ["45%", "70%"],
-        center: ["50%", "45%"],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 8,
-          borderColor: "#fff",
-          borderWidth: 2,
-        },
-        label: { show: false },
-        emphasis: {
-          label: { show: true, fontSize: 16, fontWeight: "bold" },
-        },
-        data: [
-          { value: 450, name: "大一", itemStyle: { color: "#409EFF" } },
-          { value: 380, name: "大二", itemStyle: { color: "#67C23A" } },
-          { value: 200, name: "大三", itemStyle: { color: "#E6A23C" } },
-          { value: 174, name: "大四", itemStyle: { color: "#F56C6C" } },
-        ],
-      },
-    ],
-  });
-};
-
-const handleResize = () => {
-  lineChartInstance?.resize();
-  pieChartInstance?.resize();
-};
-
-onMounted(() => {
-  nextTick(() => {
-    initCharts();
-    window.addEventListener("resize", handleResize);
-  });
-});
-
-onUnmounted(() => {
-  window.removeEventListener("resize", handleResize);
-  lineChartInstance?.dispose();
-  pieChartInstance?.dispose();
+  return "当前还没有公开活动，之后可以再来看看最新动态。";
 });
 </script>
 
 <style scoped>
-.chart-row {
-  margin-top: 20px;
+.club-overview {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  border: 1px solid rgba(64, 158, 255, 0.08);
 }
 
-.mb-20 {
-  margin-bottom: 20px;
+.overview-header {
+  margin-bottom: 16px;
 }
 
-.chart-box {
-  height: 350px;
-  width: 100%;
+.overview-title {
+  margin: 0 0 6px;
+  font-size: 18px;
 }
 
-.card-header {
-  font-weight: bold;
-  font-size: 16px;
+.overview-desc {
+  margin: 0;
+  color: var(--text-light-color);
+  line-height: 1.6;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.overview-card {
+  padding: 16px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+}
+
+.overview-card__label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-light-color);
+}
+
+.overview-card__value {
+  display: block;
+  margin: 8px 0;
+  font-size: 24px;
+  color: var(--text-color);
+}
+
+.overview-card__desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-light-color);
+}
+
+.overview-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.overview-note {
+  padding: 16px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px dashed var(--border-color);
+}
+
+.overview-note h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.overview-note p {
+  margin: 0;
+  color: var(--text-light-color);
+  line-height: 1.7;
 }
 </style>

@@ -1,13 +1,13 @@
 <template>
   <div class="preferences-page">
-    <el-page-header @back="handleBack" content="页面偏好" />
-    <SystemSettingComponent class="setting-content" />
+    <el-page-header @back="handleBack" content="界面偏好" />
+    <PreferenceSettingsPanel class="setting-content" />
   </div>
 </template>
 
 <script setup>
 import { useRouter } from "vue-router";
-import SystemSettingComponent from "./components/SystemSetting.vue";
+import PreferenceSettingsPanel from "./components/SystemSetting.vue";
 
 const router = useRouter();
 
