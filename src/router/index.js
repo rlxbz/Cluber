@@ -1,20 +1,15 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Layout from "@/views/Layout/index.vue";
-import Login from "@/views/Login/index.vue";
-import Register from "@/views/Register/index.vue";
-import Home from "@/views/Home/index.vue";
-import Club from "@/views/Club/index.vue";
-import Notice from "@/views/Notice/index.vue";
-import Push from "@/views/Push/index.vue";
-import Apply from "@/views/Apply/index.vue";
-
-const GUEST_FRONT_ROLES = ["guest", "student", "club_admin", "sys_admin"];
-const FRONT_ROLES = ["student", "club_admin", "sys_admin"];
-const CLUB_SERVICE_ROLES = ["club_admin"];
+import {
+  GUEST_FRONT_ROLE_LIST,
+  FRONT_ROLE_LIST,
+  FRONT_CORE_ROLE_LIST,
+  CLUB_ADMIN_ROLE_LIST,
+} from "@/stores/userStore";
 
 const createRouteMeta = ({
   title,
-  roles = FRONT_ROLES,
+  roles = FRONT_CORE_ROLE_LIST,
   hidden = false,
   requiresAuth = true,
   menuKey = "",
@@ -44,10 +39,10 @@ const router = createRouter({
         {
           path: "home",
           name: "front-home",
-          component: Home,
+          component: () => import("@/views/Home/index.vue"),
           meta: createRouteMeta({
             title: "首页",
-            roles: GUEST_FRONT_ROLES,
+            roles: GUEST_FRONT_ROLE_LIST,
             requiresAuth: false,
             menuKey: "/home",
           }),
@@ -55,7 +50,7 @@ const router = createRouter({
         {
           path: "club",
           name: "club-square",
-          component: Club,
+          component: () => import("@/views/Club/index.vue"),
           meta: createRouteMeta({
             title: "社团",
             menuKey: "/club",
@@ -93,7 +88,7 @@ const router = createRouter({
         {
           path: "apply",
           name: "application-service",
-          component: Apply,
+          component: () => import("@/views/Apply/index.vue"),
           meta: createRouteMeta({
             title: "申请服务",
             menuKey: "/apply",
@@ -102,7 +97,7 @@ const router = createRouter({
         {
           path: "notice",
           name: "notice-list",
-          component: Notice,
+          component: () => import("@/views/Notice/index.vue"),
           meta: createRouteMeta({
             title: "公告",
             menuKey: "/notice",
@@ -131,7 +126,7 @@ const router = createRouter({
         {
           path: "push",
           name: "club-feed",
-          component: Push,
+          component: () => import("@/views/Push/index.vue"),
           meta: createRouteMeta({
             title: "社团动态",
             hidden: true,
@@ -195,13 +190,13 @@ const router = createRouter({
     {
       path: "/register",
       name: "register",
-      component: Register,
+      component: () => import("@/views/Register/index.vue"),
       meta: { requiresAuth: false, hidden: true, title: "注册" },
     },
     {
       path: "/login",
       name: "login",
-      component: Login,
+      component: () => import("@/views/Login/index.vue"),
       meta: { requiresAuth: false, hidden: true, title: "登录" },
     },
     {
@@ -211,7 +206,7 @@ const router = createRouter({
       component: () => import("@/views/Admin/index.vue"),
       meta: createRouteMeta({
         title: "页面偏好",
-        roles: FRONT_ROLES,
+        roles: FRONT_ROLE_LIST,
         hidden: true,
         requiresAuth: true,
         menuKey: "/preferences",
@@ -222,7 +217,7 @@ const router = createRouter({
       redirect: "/member/club",
       meta: createRouteMeta({
         title: "我的社团",
-        roles: CLUB_SERVICE_ROLES,
+        roles: CLUB_ADMIN_ROLE_LIST,
         hidden: true,
         requiresAuth: true,
         menuKey: "/member/club",

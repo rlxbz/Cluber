@@ -20,13 +20,14 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
 import ApplyActivity from "./components/ApplyActivity.vue";
 import ApplyJoin from "./components/ApplyJoin.vue";
-import MemberApply from "@/views/Member/components/MemberApply.vue";
 import { ElPageHeader, ElTabs, ElTabPane } from "element-plus";
+
+const MemberApply = defineAsyncComponent(() => import("@/views/Member/components/MemberApply.vue"));
 
 const route = useRoute();
 const router = useRouter();
@@ -34,13 +35,18 @@ const userStore = useUserStore();
 const activeTab = ref("records");
 
 const visibleTabs = computed(() => {
-  const tabs = [{ name: "records", label: "我的申请记录" }];
+  const tabs = [];
 
-  if (userStore.isClubAdmin) {
-    tabs.unshift(
-      { name: "activity", label: "本社团活动发布" },
-      { name: "join", label: "本社团申请处理" }
-    );
+  if (userStore.frontPermissions.canPublishClubActivity) {
+    tabs.push({ name: "activity", label: "本社团活动发布" });
+  }
+
+  if (userStore.frontPermissions.canReviewClubJoinApplications) {
+    tabs.push({ name: "join", label: "本社团申请处理" });
+  }
+
+  if (userStore.frontPermissions.canViewMyApplications) {
+    tabs.push({ name: "records", label: "我的申请记录" });
   }
 
   return tabs;

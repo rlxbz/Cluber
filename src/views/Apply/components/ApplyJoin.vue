@@ -119,7 +119,9 @@ const applyList = ref([]);
 const defaultAvatar = ref(defaultAvatarImage);
 const managedClubId = ref(null);
 
-const showHandleBtn = computed(() => userStore.isClubAdmin);
+const showHandleBtn = computed(() =>
+  userStore.frontPermissions.canReviewClubJoinApplications
+);
 
 const ensureManagedClubId = async () => {
   if (managedClubId.value) {
@@ -134,7 +136,7 @@ const ensureManagedClubId = async () => {
 };
 
 const loadApplyList = async () => {
-  if (!userStore.isClubAdmin) {
+  if (!userStore.can("canReviewClubJoinApplications")) {
     applyList.value = [];
     total.value = 0;
     return;
@@ -181,6 +183,10 @@ const refreshList = () => {
 };
 
 const handleApprove = async (id) => {
+  if (!userStore.can("canReviewClubJoinApplications")) {
+    return;
+  }
+
   try {
     await applyStore.handleClubJoinApplication(id, "approved");
     ElMessage.success("已通过该申请");
@@ -191,6 +197,10 @@ const handleApprove = async (id) => {
 };
 
 const handleReject = async (id) => {
+  if (!userStore.can("canReviewClubJoinApplications")) {
+    return;
+  }
+
   try {
     await applyStore.handleClubJoinApplication(id, "rejected");
     ElMessage.success("已拒绝该申请");

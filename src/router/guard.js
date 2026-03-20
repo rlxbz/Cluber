@@ -7,7 +7,7 @@ router.beforeEach(async (to, from, next) => {
   const requiresAuth = to.meta.requiresAuth ?? to.meta.requireAuth ?? false;
   const isAuthPage = to.path === "/login" || to.path === "/register";
 
-  if (userStore.token && (!userStore.userInfo || !userStore.normalizedRole)) {
+  if (userStore.token && (!userStore.hasUserProfile || !userStore.normalizedRole)) {
     await userStore.restoreSession();
   }
 

@@ -67,7 +67,7 @@ const menuList = computed(() =>
 
 const activeMenu = computed(() => {
   if (route.path.startsWith("/member")) {
-    return route.path === "/member/club" && userStore.isClubAdmin
+    return route.path === "/member/club" && userStore.can("canManageOwnClub")
       ? "/member/club"
       : "/member/info";
   }

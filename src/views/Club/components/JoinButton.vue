@@ -1,7 +1,7 @@
 <template>
   <div class="join-club-container">
     <CommonButton
-      v-if="!hasApplied && !isMember"
+      v-if="canShowJoinAction"
       type="primary"
       :loading="applyLoading"
       @click="handleJoinClub"
@@ -9,7 +9,7 @@
       申请加入社团
     </CommonButton>
 
-    <CommonButton v-if="hasApplied && !isMember" type="info" disabled>
+    <CommonButton v-if="canShowAppliedState" type="info" disabled>
       已申请，等待审核
     </CommonButton>
 
@@ -25,6 +25,7 @@ import { useClubStore } from "@/stores/clubStore";
 import { useUserStore } from "@/stores/userStore";
 import { ElMessage } from "element-plus";
 import CommonButton from "@/components/common/Button/index.vue";
+import { getMemberUserId } from "@/utils/member";
 
 // 路由参数
 const route = useRoute();
@@ -40,6 +41,13 @@ const applyLoading = ref(false);
 const hasApplied = ref(false);
 const isMember = ref(false);
 const normalizedClubId = computed(() => String(clubId));
+const canSubmitJoinClubApply = computed(() => userStore.can("canSubmitJoinClubApply"));
+const canShowJoinAction = computed(
+  () => canSubmitJoinClubApply.value && !hasApplied.value && !isMember.value
+);
+const canShowAppliedState = computed(
+  () => canSubmitJoinClubApply.value && hasApplied.value && !isMember.value
+);
 
 // 检查是否已申请或已是成员
 const checkApplyStatus = async () => {
@@ -54,7 +62,7 @@ const checkApplyStatus = async () => {
 
     if (clubStore.currentClub) {
       isMember.value = (clubStore.currentClub.members || []).some(
-        (member) => member.id === userStore.userInfo?.id
+        (member) => getMemberUserId(member) === String(userStore.userInfo?.id ?? "")
       );
     }
   } catch (err) {
@@ -64,6 +72,10 @@ const checkApplyStatus = async () => {
 
 // 申请加入社团
 const handleJoinClub = async () => {
+  if (!canSubmitJoinClubApply.value) {
+    return;
+  }
+
   applyLoading.value = true;
   try {
     await applyStore.applyJoinClub({

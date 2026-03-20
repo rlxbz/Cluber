@@ -85,7 +85,6 @@ import { useRouter } from "vue-router";
 import ActivityItem from "./components/ActivityItem.vue";
 import { getActivityListAPI } from "@/apis/activity";
 import { useUserStore } from "@/stores/userStore";
-import { ElLoading } from "element-plus";
 
 // 路由实例
 const router = useRouter();
@@ -102,7 +101,9 @@ const searchKey = ref("");
 const filterStatus = ref("");
 const currentPage = ref(1);
 const pageSize = ref(10);
-const canManageClubActivities = computed(() => userStore.isClubAdmin);
+const canManageClubActivities = computed(() =>
+  userStore.frontPermissions.canPublishClubActivity
+);
 
 /**
  * 跳转到本社团活动发布页

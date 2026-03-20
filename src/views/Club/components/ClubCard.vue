@@ -19,7 +19,7 @@
         <CommonButton size="small" @click="handleViewDetail"> 详情 </CommonButton>
 
         <CommonButton
-          v-if="!isMember && !hasApplied"
+          v-if="canShowJoinAction"
           size="small"
           type="primary"
           @click="handleJoinApply"
@@ -28,7 +28,7 @@
           申请加入
         </CommonButton>
 
-        <el-button v-if="hasApplied" size="small" type="info" disabled>
+        <el-button v-if="canShowAppliedState" size="small" type="info" disabled>
           已申请
         </el-button>
       </div>
@@ -43,6 +43,7 @@ import { useApplyStore } from "@/stores/applyStore";
 import { useUserStore } from "@/stores/userStore";
 import CommonButton from "@/components/common/Button/index.vue";
 import { ElMessage } from "element-plus";
+import { getMemberUserId } from "@/utils/member";
 
 const props = defineProps({
   club: {
@@ -54,11 +55,14 @@ const props = defineProps({
 const router = useRouter();
 const applyStore = useApplyStore();
 const userStore = useUserStore();
+const canSubmitJoinClubApply = computed(() => userStore.can("canSubmitJoinClubApply"));
 
 // 检查当前用户是否为社团成员
 const isMember = computed(() => {
   if (!userStore.userInfo || !props.club.members) return false;
-  return props.club.members.some((member) => member.id === userStore.userInfo.id);
+  return props.club.members.some(
+    (member) => getMemberUserId(member) === String(userStore.userInfo.id ?? "")
+  );
 });
 
 // 检查当前用户是否已申请加入
@@ -71,6 +75,12 @@ const hasApplied = computed(() => {
       apply.status === "pending"
   );
 });
+const canShowJoinAction = computed(
+  () => canSubmitJoinClubApply.value && !isMember.value && !hasApplied.value
+);
+const canShowAppliedState = computed(
+  () => canSubmitJoinClubApply.value && hasApplied.value && !isMember.value
+);
 
 // 查看社团详情
 const handleViewDetail = () => {
@@ -79,6 +89,10 @@ const handleViewDetail = () => {
 
 // 申请加入社团
 const handleJoinApply = async () => {
+  if (!canSubmitJoinClubApply.value) {
+    return;
+  }
+
   if (!userStore.isLogin) {
     ElMessage.warning("请先登录");
     router.push("/login");
