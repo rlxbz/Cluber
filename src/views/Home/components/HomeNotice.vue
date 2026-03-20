@@ -1,9 +1,21 @@
 <template>
   <div class="home-notice">
     <div class="notice-title">最新公告</div>
-    <el-card v-loading="noticeStore.noticeLoading" class="notice-list">
+    <el-card class="notice-list">
       <template #default>
-        <div v-if="noticeStore.noticeList.length > 0">
+        <FrontLoadingState
+          v-if="noticeStore.noticeLoading"
+          compact
+          title="公告加载中"
+          description="正在整理最新公告。"
+        />
+        <FrontErrorState
+          v-else-if="noticeStore.error"
+          compact
+          :description="noticeStore.error"
+          @retry="loadNoticeList"
+        />
+        <div v-else-if="noticeStore.noticeList.length > 0">
           <div
             class="notice-item"
             v-for="notice in noticeStore.noticeList"
@@ -15,7 +27,12 @@
             <div class="notice-content">{{ notice.content }}</div>
           </div>
         </div>
-        <div v-else class="empty-notice">暂无公告信息</div>
+        <FrontEmptyState
+          v-else
+          compact
+          title="暂时还没有公告"
+          description="当前没有新的公告通知。"
+        />
       </template>
     </el-card>
     <el-pagination
@@ -33,21 +50,22 @@
 import { onMounted, ref } from "vue";
 import { useNoticeStore } from "@/stores/noticeStore";
 import { useRouter } from "vue-router";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
 
 const noticeStore = useNoticeStore();
 const router = useRouter();
 const page = ref(1);
 
-// 页面挂载时获取公告列表
-onMounted(() => {
-  // 开发文档第10天要求：首页公告无需登录即可查看，移除token判断
+const loadNoticeList = () => {
   noticeStore.getNoticeList({ page: page.value, size: 5 });
-});
+};
 
 // 分页切换
 const handlePageChange = (val) => {
   page.value = val;
-  noticeStore.getNoticeList({ page: val, size: 5 });
+  loadNoticeList();
 };
 
 // 点击公告跳转详情页
@@ -63,6 +81,8 @@ const formatTime = (time) => {
     .toString()
     .padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
 };
+
+onMounted(loadNoticeList);
 </script>
 
 <style scoped>

@@ -2,30 +2,56 @@
   <div class="notice-detail">
     <el-page-header
       @back="handleBack"
-      :content="`公告详情-${noticeStore.currentNotice?.id}`"
+      :content="`动态详情-${pushStore.currentPush?.id || '未知'}`"
     ></el-page-header>
 
-    <el-card v-loading="noticeStore.noticeLoading" class="detail-card">
-      <div v-if="noticeStore.currentNotice" class="detail-content">
-        <h1 class="title">{{ noticeStore.currentNotice.title }}</h1>
-        <div class="time">{{ formatTime(noticeStore.currentNotice.createTime) }}</div>
-        <div class="content">{{ noticeStore.currentNotice.content }}</div>
+    <el-card class="detail-card">
+      <FrontLoadingState
+        v-if="pushStore.loading"
+        compact
+        title="动态详情加载中"
+        description="正在整理这条社团动态。"
+      />
+
+      <FrontErrorState
+        v-else-if="detailError"
+        compact
+        :description="detailError"
+        @retry="loadPushDetail"
+      />
+
+      <div v-else-if="pushStore.currentPush" class="detail-content">
+        <h1 class="title">{{ pushStore.currentPush.title }}</h1>
+        <div class="time">{{ formatTime(pushStore.currentPush.createTime) }}</div>
+        <div class="content">{{ pushStore.currentPush.content }}</div>
       </div>
 
-      <el-empty v-else description="暂无公告详情"></el-empty>
+      <FrontEmptyState
+        v-else
+        compact
+        title="这条动态暂时无法查看"
+        description="动态可能已下线，或者链接已经失效。"
+        action-text="返回动态列表"
+        @action="router.push('/push')"
+      />
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { useNoticeStore } from "@/stores/noticeStore";
-import { onMounted } from "vue";
+import { usePushStore } from "@/stores/pushStore";
+import { computed, watch } from "vue";
 import dayjs from "dayjs";
 import { useRoute, useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
 
-const noticeStore = useNoticeStore();
+const pushStore = usePushStore();
 const route = useRoute();
 const router = useRouter();
+const detailError = computed(() => pushStore.error || "");
 
 // 格式化时间
 const formatTime = (time) => {
@@ -37,13 +63,19 @@ const handleBack = () => {
   router.back();
 };
 
-// 页面挂载时加载详情
-onMounted(() => {
-  const { id } = route.params; // 从路由参数中获取公告ID
-  if (id) {
-    noticeStore.getNoticeDetail(id);
+const loadPushDetail = () => {
+  const { id } = route.params;
+  if (!id || isNaN(Number(id))) {
+    pushStore.currentPush = null;
+    pushStore.error = "动态编号无效，请返回动态列表重新选择。";
+    ElMessage.warning("动态编号无效");
+    return;
   }
-});
+  pushStore.error = "";
+  pushStore.getPushDetail(id);
+};
+
+watch(() => route.params.id, loadPushDetail, { immediate: true });
 </script>
 
 <style scoped>

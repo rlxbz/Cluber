@@ -19,22 +19,26 @@
         </el-input>
       </div>
 
-      <!-- 加载状态 -->
-      <div v-if="noticeStore.noticeLoading" class="loading-container">
-        <el-loading-spinner />
-      </div>
+      <FrontLoadingState
+        v-if="noticeStore.noticeLoading"
+        title="公告加载中"
+        description="最新通知正在路上，请稍等一下。"
+      />
 
-      <!-- 错误提示 -->
-      <div v-else-if="errorMessage" class="error-message">
-        <el-alert title="加载失败" :description="errorMessage" type="error" show-icon />
-      </div>
+      <FrontErrorState
+        v-else-if="noticeStore.error"
+        :description="errorMessage"
+        @retry="loadNoticeList"
+      />
 
-      <!-- 空状态 -->
-      <div v-else-if="noticeStore.noticeList.length === 0" class="no-data">
-        <el-empty description="暂无公告数据" />
-      </div>
+      <FrontEmptyState
+        v-else-if="noticeStore.noticeList.length === 0"
+        title="暂时还没有公告"
+        description="当前没有新的公告通知，之后再来看看吧。"
+        action-text="重新加载"
+        @action="loadNoticeList"
+      />
 
-      <!-- 公告列表 -->
       <div v-else class="notice-list">
         <NoticeItem
           v-for="notice in noticeStore.noticeList"
@@ -61,15 +65,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useNoticeStore } from "@/stores/noticeStore";
 import NoticeItem from "./components/NoticeItem.vue";
 import { useRouter } from "vue-router";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
 
 // 状态管理
 const noticeStore = useNoticeStore();
 const router = useRouter();
-const errorMessage = ref("");
+const errorMessage = computed(() => noticeStore.error || "获取公告列表失败，请重试");
 
 // 分页参数
 const page = ref(1);
@@ -80,17 +87,12 @@ const searchKey = ref("");
  * 加载公告列表数据
  */
 const loadNoticeList = async () => {
-  try {
-    const params = {
-      page: page.value,
-      size: size.value,
-      keyword: searchKey.value,
-    };
-    await noticeStore.getNoticeList(params);
-  } catch (err) {
-    errorMessage.value = "获取公告列表失败，请重试";
-    console.error("公告列表加载失败:", err);
-  }
+  const params = {
+    page: page.value,
+    size: size.value,
+    keyword: searchKey.value,
+  };
+  await noticeStore.getNoticeList(params);
 };
 
 /**

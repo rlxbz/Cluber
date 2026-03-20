@@ -4,7 +4,35 @@
       <span>本社团活动发布</span>
     </div>
 
+    <LoginRequiredState
+      v-if="!userStore.isLogin"
+      :redirect="route.fullPath"
+      description="登录后可继续提交活动发布申请。"
+    />
+
+    <FrontLoadingState
+      v-else-if="clubsLoading"
+      compact
+      title="社团信息加载中"
+      description="正在准备你可以发布活动的社团列表。"
+    />
+
+    <FrontErrorState
+      v-else-if="clubLoadError"
+      compact
+      :description="clubLoadError"
+      @retry="getMyClubs"
+    />
+
+    <FrontEmptyState
+      v-else-if="myClubs.length === 0"
+      compact
+      title="还没有可发布活动的社团"
+      description="你当前没有可管理的社团，暂时无法提交活动发布。"
+    />
+
     <el-form
+      v-else
       ref="activityFormRef"
       :model="activityForm"
       :rules="rules"
@@ -74,16 +102,27 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { applyActivityAPI } from "@/apis/apply.js";
 import { useClubStore } from "@/stores/clubStore";
+import { useUserStore } from "@/stores/userStore";
+import LoginRequiredState from "@/components/business/LoginRequiredState.vue";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import { getErrorMessage } from "@/utils/frontBusiness";
 
 // 表单引用
 const activityFormRef = ref(null);
 // 提交状态
 const isSubmitting = ref(false);
+const route = useRoute();
+const userStore = useUserStore();
 // 我的社团列表
 const myClubs = ref([]);
+const clubsLoading = ref(false);
+const clubLoadError = ref("");
 const clubStore = useClubStore();
 
 // 表单数据
@@ -122,6 +161,8 @@ const rules = {
  * 获取我的社团列表（用于选择所属社团）
  */
 const getMyClubs = async () => {
+  clubsLoading.value = true;
+  clubLoadError.value = "";
   try {
     const clubs = await clubStore.getMyClubList();
     myClubs.value = clubs;
@@ -130,7 +171,9 @@ const getMyClubs = async () => {
       activityForm.clubId = myClubs.value[0].id;
     }
   } catch (error) {
-    ElMessage.error("获取社团列表失败：" + (error.message || ""));
+    clubLoadError.value = getErrorMessage(error, "获取社团列表失败，请稍后重试");
+  } finally {
+    clubsLoading.value = false;
   }
 };
 
@@ -142,16 +185,22 @@ const submitForm = async () => {
 
   try {
     await activityFormRef.value.validate();
+
+    if (!userStore.isLogin) {
+      ElMessage.warning("你还未登录，登录后可继续提交活动发布");
+      return;
+    }
+
     isSubmitting.value = true;
 
     // 调用API提交申请
     await applyActivityAPI(activityForm);
 
-    ElMessage.success("活动发布信息已提交");
+    ElMessage.success("活动发布信息已提交，请留意后续审核结果");
     resetForm(); // 重置表单
   } catch (error) {
-    if (error.name !== "ValidationError") {
-      ElMessage.error("提交失败：" + (error.message || "未知错误"));
+    if (error?.name !== "ValidationError") {
+      ElMessage.error("提交失败：" + getErrorMessage(error, "未知错误"));
     }
   } finally {
     isSubmitting.value = false;
@@ -169,7 +218,9 @@ const resetForm = () => {
 
 // 页面加载时获取社团列表
 onMounted(() => {
-  getMyClubs();
+  if (userStore.isLogin) {
+    getMyClubs();
+  }
 });
 </script>
 

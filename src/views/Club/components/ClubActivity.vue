@@ -1,17 +1,27 @@
 <template>
   <div class="club-activity-container">
-    <div class="activity-list">
-      <activity-item
-        v-for="activity in activityList"
-        :key="activity.id"
-        :activity="activity"
-        @click="handleActivityClick(activity.id)"
-      />
-    </div>
+    <FrontLoadingState
+      v-if="loading"
+      compact
+      title="活动加载中"
+      description="正在查看这个社团最近的活动安排。"
+    />
 
-    <div v-if="activityList.length === 0" class="no-activity">
-      <el-empty description="该社团暂无活动" />
-    </div>
+    <FrontErrorState
+      v-else-if="error"
+      compact
+      :description="error"
+      @retry="getClubActivities"
+    />
+
+    <FrontEmptyState
+      v-else-if="activityList.length === 0"
+      compact
+      title="这个社团暂时还没有活动"
+      description="之后再来看看，也许很快就会有新的活动发布。"
+    />
+
+    <ActivityList v-else :activities="activityList" layout="list" @item-click="handleActivityClick" />
 
     <el-pagination
       v-if="total > 0"
@@ -30,8 +40,11 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useActivityStore } from "@/stores/activityStore";
-import ActivityItem from "@/views/Activity/components/ActivityItem.vue";
-import { ElMessage } from "element-plus";
+import ActivityList from "@/views/Activity/components/ActivityList.vue";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import { getErrorMessage } from "@/utils/frontBusiness";
 
 // 接收父组件传入的社团ID
 const props = defineProps({
@@ -50,12 +63,16 @@ const currentPage = ref(1);
 const pageSize = ref(5);
 const total = ref(0);
 const activityList = ref([]);
+const loading = ref(false);
+const error = ref("");
 
 // 路由实例
 const router = useRouter();
 
 // 获取社团活动列表
 const getClubActivities = async () => {
+  loading.value = true;
+  error.value = "";
   try {
     const params = {
       clubId: props.clubId,
@@ -63,11 +80,15 @@ const getClubActivities = async () => {
       size: pageSize.value,
     };
     const res = await activityStore.getClubActivityList(params);
-    activityList.value = res.list;
-    total.value = res.total;
-  } catch (error) {
-    console.error("获取社团活动失败:", error);
-    ElMessage.error("加载活动列表失败，请重试");
+    activityList.value = res.list || [];
+    total.value = res.total || 0;
+  } catch (err) {
+    console.error("获取社团活动失败:", err);
+    error.value = getErrorMessage(err, "加载活动列表失败，请重试");
+    activityList.value = [];
+    total.value = 0;
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -105,17 +126,6 @@ watch(() => currentPage.value, getClubActivities);
   border-radius: 4px;
   padding: 20px;
   margin-top: 20px;
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.no-activity {
-  padding: 40px 0;
-  text-align: center;
 }
 
 .activity-pagination {

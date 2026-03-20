@@ -17,22 +17,25 @@
       </template>
     </el-input>
 
-    <div v-if="loading" class="loading-container">
-      <el-loading-spinner />
-    </div>
+    <FrontLoadingState
+      v-if="pushStore.loading"
+      title="动态加载中"
+      description="正在整理社团最新动态，请稍等一下。"
+    />
 
-    <!-- <div v-if="error" class="error-message">
-      <el-alert
-        title="加载失败"
-        description="获取推送列表时发生错误，请稍后重试"
-        type="error"
-        show-icon
-      />
-    </div> -->
+    <FrontErrorState
+      v-else-if="pushStore.error"
+      :description="pushStore.error"
+      @retry="fetchPushList"
+    />
 
-    <div v-if="!loading && !error && pushList.length === 0" class="no-data">
-      <el-empty description="暂无推送数据" />
-    </div>
+    <FrontEmptyState
+      v-else-if="pushList.length === 0"
+      title="暂时还没有动态"
+      description="社团最近还没有发布新动态，之后再来看看吧。"
+      action-text="重新加载"
+      @action="fetchPushList"
+    />
 
     <div v-else class="push-list">
       <PushItem v-for="push in pushList" :key="push.id" :push="push" />
@@ -56,12 +59,12 @@
 import { ref, onMounted } from "vue";
 import { usePushStore } from "@/stores/pushStore";
 import PushItem from "./components/PushItem.vue";
-import { getPushListAPI } from "@/apis/push";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
 
 // 状态管理
 const pushStore = usePushStore();
-const loading = ref(false);
-const error = ref(false);
 const pushList = ref([]);
 const total = ref(0);
 
@@ -72,25 +75,14 @@ const searchKey = ref("");
 
 // 获取推送列表
 const fetchPushList = async () => {
-  loading.value = true;
-  error.value = false;
-  try {
-    const params = {
-      page: page.value,
-      size: size.value,
-      searchKey: searchKey.value,
-    };
-    const res = await getPushListAPI(params);
-    pushList.value = res.data.list;
-    total.value = res.data.total;
-    // 同步到store
-    pushStore.setPushList(res.data.list);
-  } catch (err) {
-    console.error("获取推送列表失败:", err);
-    error.value = true;
-  } finally {
-    loading.value = false;
-  }
+  const params = {
+    page: page.value,
+    size: size.value,
+    searchKey: searchKey.value,
+  };
+  const result = await pushStore.getPushList(params);
+  pushList.value = result.list || [];
+  total.value = result.total || 0;
 };
 
 // 搜索处理

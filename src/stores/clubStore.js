@@ -25,12 +25,14 @@ export const useClubStore = defineStore("club", {
     // 获取社团列表
     async getClubList(params) {
       this.loading = true;
+      this.error = null;
       try {
         const res = await getClubListAPI(params);
         this.clubList = res.data.list || [];
         this.total = res.data.total || 0;
         return res.data;
       } catch (error) {
+        this.error = error.message || "获取社团列表失败";
         console.error("获取社团列表失败:", error);
         throw error;
       } finally {
@@ -45,11 +47,14 @@ export const useClubStore = defineStore("club", {
     // 获取社团详情
     async getClubDetail(id) {
       this.loading = true;
+      this.error = null;
       try {
         const res = await getClubDetailAPI(id);
         this.currentClub = res.data;
         return res.data;
       } catch (error) {
+        this.error = error.message || "获取社团详情失败";
+        this.currentClub = null;
         console.error("获取社团详情失败:", error);
         throw error;
       } finally {
@@ -60,11 +65,13 @@ export const useClubStore = defineStore("club", {
     // 获取我的社团列表
     async getMyClubList() {
       this.loading = true;
+      this.error = null;
       try {
         const res = await getMyClubListAPI();
         this.myClubs = res.data || [];
         return this.myClubs;
       } catch (error) {
+        this.error = error.message || "获取我的社团列表失败";
         console.error("获取我的社团列表失败:", error);
         throw error;
       } finally {
@@ -89,6 +96,10 @@ export const useClubStore = defineStore("club", {
 
     setSearchKey(key) {
       this.searchKey = key;
+    },
+
+    setCategory(category) {
+      this.category = category;
     },
 
     // 新增：设置分页参数（如果需要）

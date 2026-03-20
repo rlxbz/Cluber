@@ -8,7 +8,15 @@ router.beforeEach(async (to, from, next) => {
   const isAuthPage = to.path === "/login" || to.path === "/register";
 
   if (userStore.token && (!userStore.hasUserProfile || !userStore.normalizedRole)) {
-    await userStore.restoreSession();
+    try {
+      await userStore.restoreSession();
+    } catch (error) {
+      next({
+        path: "/login",
+        query: { redirect: to.fullPath },
+      });
+      return;
+    }
   }
 
   if (isAuthPage && userStore.isLogin) {
@@ -32,7 +40,10 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta.roles?.length && !userStore.hasRouteAccess(to.meta.roles)) {
     ElMessage.error("当前账号暂无该页面访问权限");
-    next(userStore.defaultFrontRoute);
+    next({
+      path: "/403",
+      query: { redirect: from.fullPath || userStore.defaultFrontRoute },
+    });
     return;
   }
 

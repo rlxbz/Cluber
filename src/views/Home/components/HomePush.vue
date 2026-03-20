@@ -6,23 +6,44 @@
     </div>
 
     <div class="push-list">
-      <div
-        v-for="push in pushList"
-        :key="push.id"
-        class="push-item"
-        @click="handlePushClick(push)"
-      >
-        <div class="push-content">
-          <h4 class="push-title">{{ push.title }}</h4>
-          <p class="push-desc">{{ push.content }}</p>
-        </div>
-        <div class="push-meta">
-          <span class="source">{{ push.clubName }}</span>
-          <span class="time">{{ formatTime(push.createTime) }}</span>
-        </div>
-      </div>
+      <FrontLoadingState
+        v-if="pushStore.loading"
+        compact
+        title="动态加载中"
+        description="正在整理最近的社团动态。"
+      />
 
-      <div v-if="pushList.length === 0" class="empty-state">暂无推送内容</div>
+      <FrontErrorState
+        v-else-if="pushStore.error"
+        compact
+        :description="pushStore.error"
+        @retry="loadPushList"
+      />
+
+      <template v-else-if="pushList.length > 0">
+        <div
+          v-for="push in pushList"
+          :key="push.id"
+          class="push-item"
+          @click="handlePushClick(push)"
+        >
+          <div class="push-content">
+            <h4 class="push-title">{{ push.title }}</h4>
+            <p class="push-desc">{{ push.content }}</p>
+          </div>
+          <div class="push-meta">
+            <span class="source">{{ push.clubName }}</span>
+            <span class="time">{{ formatTime(push.createTime) }}</span>
+          </div>
+        </div>
+      </template>
+
+      <FrontEmptyState
+        v-else
+        compact
+        title="暂时还没有动态"
+        description="等社团发布新动态后，这里会第一时间显示。"
+      />
     </div>
   </div>
 </template>
@@ -32,6 +53,9 @@ import { onMounted, ref } from "vue";
 import { usePushStore } from "@/stores/pushStore";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
 
 // 初始化Store和路由
 const pushStore = usePushStore();
@@ -48,11 +72,12 @@ const handlePushClick = (push) => {
   router.push(`/push/${push.id}`);
 };
 
-// 页面加载时获取推送列表
-onMounted(async () => {
-  const list = await pushStore.getPushList({ limit: 5 }); // 获取前5条推送
-  pushList.value = list;
-});
+const loadPushList = async () => {
+  const result = await pushStore.getPushList({ limit: 5 });
+  pushList.value = result.list || [];
+};
+
+onMounted(loadPushList);
 </script>
 
 <style scoped>

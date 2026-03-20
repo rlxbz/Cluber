@@ -1,7 +1,7 @@
 <template>
   <el-card>
     <template #header>
-      <span>本社团入社申请处理</span>
+      <span>本社团入社申请记录</span>
     </template>
 
     <div class="filter-bar mb-10">
@@ -12,7 +12,7 @@
         @change="handleFilterChange"
         style="width: 180px"
       >
-        <el-option label="待处理" value="pending" />
+        <el-option label="审核中" value="pending" />
         <el-option label="已通过" value="approved" />
         <el-option label="已拒绝" value="rejected" />
       </el-select>
@@ -20,15 +20,7 @@
       <el-button type="primary" icon="Refresh" @click="refreshList">刷新</el-button>
     </div>
 
-    <el-table
-      :data="applyList"
-      border
-      style="width: 100%"
-      v-loading="isLoading"
-      table-layout="auto"
-    >
-      <el-table-column prop="id" label="申请ID" min-width="80" />
-
+    <el-table :data="applyList" stripe style="width: 100%" v-loading="isLoading" table-layout="auto">
       <el-table-column label="申请人" min-width="140">
         <template #default="scope">
           <div class="applicant-info">
@@ -43,23 +35,7 @@
 
       <el-table-column label="状态" min-width="110">
         <template #default="scope">
-          <el-tag
-            :type="
-              scope.row.status === 'pending'
-                ? 'warning'
-                : scope.row.status === 'approved'
-                ? 'success'
-                : 'danger'
-            "
-          >
-            {{
-              scope.row.status === "pending"
-                ? "待处理"
-                : scope.row.status === "approved"
-                ? "已通过"
-                : "已拒绝"
-            }}
-          </el-tag>
+          <ApplyStatusTag :status="scope.row.status" />
         </template>
       </el-table-column>
 
@@ -105,6 +81,7 @@ import { useApplyStore } from "@/stores/applyStore";
 import { useClubStore } from "@/stores/clubStore";
 import { useUserStore } from "@/stores/userStore";
 import defaultAvatarImage from "@/assets/images/default-avatar.png";
+import ApplyStatusTag from "@/components/business/ApplyStatusTag.vue";
 
 const applyStore = useApplyStore();
 const clubStore = useClubStore();

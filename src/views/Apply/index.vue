@@ -12,7 +12,14 @@
     </el-tabs>
 
     <div class="tab-content mt-20">
-      <ApplyActivity v-if="activeTab === 'activity'" />
+      <FrontEmptyState
+        v-if="visibleTabs.length === 0"
+        title="当前没有可使用的申请服务"
+        description="你的账号暂时没有需要办理的申请项，可以先回首页继续浏览。"
+        action-text="返回首页"
+        @action="router.push('/home')"
+      />
+      <ApplyActivity v-else-if="activeTab === 'activity'" />
       <ApplyJoin v-else-if="activeTab === 'join'" />
       <MemberApply v-else />
     </div>
@@ -25,6 +32,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
 import ApplyActivity from "./components/ApplyActivity.vue";
 import ApplyJoin from "./components/ApplyJoin.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
 import { ElPageHeader, ElTabs, ElTabPane } from "element-plus";
 
 const MemberApply = defineAsyncComponent(() => import("@/views/Member/components/MemberApply.vue"));

@@ -1,7 +1,11 @@
 <template>
   <div class="activity-page">
     <div class="page-header">
-      <h1>活动列表</h1>
+      <div>
+        <h1>活动列表</h1>
+        <p class="page-desc">看看近期社团活动，按兴趣筛选后再决定报名。</p>
+      </div>
+
       <el-button
         v-if="canManageClubActivities"
         type="primary"
@@ -10,60 +14,46 @@
       >
         发布本社团活动
       </el-button>
-      <el-input
-        v-model="searchKey"
-        placeholder="搜索活动名称"
-        prefix-icon="Search"
-        class="search-input"
-        @keyup.enter="handleSearch"
-      />
     </div>
 
     <el-card class="activity-list-card">
       <template #header>
         <div class="header-actions">
           <span>共 {{ total }} 个活动</span>
-          <el-select
-            v-model="filterStatus"
-            placeholder="状态筛选"
-            size="small"
-            @change="handleFilterChange"
-            class="filterStatus"
-          >
-            <el-option label="全部活动" value="" />
-            <el-option label="未开始" value="upcoming" />
-            <el-option label="进行中" value="ongoing" />
-            <el-option label="已结束" value="ended" />
-          </el-select>
+
+          <ListFilterBar
+            v-model:keyword="searchKey"
+            v-model:filters="filters"
+            :filter-items="activityFilterItems"
+            placeholder="搜索活动名称或主办方"
+            action-text="查找活动"
+            @search="handleSearch"
+          />
         </div>
       </template>
 
-      <!-- 加载状态 -->
-      <div v-if="isLoading" class="loading-container">
-        <el-loading :visible="true" text="加载活动列表中..." />
-      </div>
+      <FrontLoadingState
+        v-if="isLoading"
+        title="活动加载中"
+        description="正在为你整理近期可以参加的活动。"
+      />
 
-      <!-- 错误状态 -->
-      <div v-else-if="error" class="error-message">
-        <el-alert title="加载失败" :description="error" type="error" show-icon />
-      </div>
+      <FrontErrorState
+        v-else-if="error"
+        :description="error"
+        @retry="fetchActivityList"
+      />
 
-      <!-- 空状态 -->
-      <div v-else-if="activityList.length === 0" class="no-data">
-        <el-empty description="暂无活动数据" />
-      </div>
+      <FrontEmptyState
+        v-else-if="activityList.length === 0"
+        title="还没有找到活动"
+        description="换个关键词或筛选条件试试，也可以稍后再来看看。"
+        action-text="重新加载"
+        @action="fetchActivityList"
+      />
 
-      <!-- 活动列表 -->
-      <div v-else class="activity-list">
-        <ActivityItem
-          v-for="activity in activityList"
-          :key="activity.id"
-          :activity="activity"
-          @click="handleActivityClick(activity.id)"
-        />
-      </div>
+      <ActivityList v-else :activities="activityList" @item-click="handleActivityClick" />
 
-      <!-- 分页 -->
       <div v-if="total > 0" class="pagination-container">
         <el-pagination
           :current-page="currentPage"
@@ -82,39 +72,49 @@
 <script setup>
 import { computed, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import ActivityItem from "./components/ActivityItem.vue";
 import { getActivityListAPI } from "@/apis/activity";
 import { useUserStore } from "@/stores/userStore";
+import ListFilterBar from "@/components/business/ListFilterBar.vue";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import ActivityList from "./components/ActivityList.vue";
+import { getErrorMessage } from "@/utils/frontBusiness";
 
-// 路由实例
 const router = useRouter();
 const userStore = useUserStore();
 
-// 页面状态
 const activityList = ref([]);
 const total = ref(0);
 const isLoading = ref(false);
 const error = ref(null);
 
-// 筛选条件
 const searchKey = ref("");
-const filterStatus = ref("");
+const filters = ref({
+  status: "",
+});
 const currentPage = ref(1);
 const pageSize = ref(10);
 const canManageClubActivities = computed(() =>
   userStore.frontPermissions.canPublishClubActivity
 );
+const activityFilterItems = [
+  {
+    key: "status",
+    placeholder: "活动状态",
+    options: [
+      { label: "全部活动", value: "" },
+      { label: "未开始", value: "upcoming" },
+      { label: "进行中", value: "ongoing" },
+      { label: "已结束", value: "ended" },
+    ],
+  },
+];
 
-/**
- * 跳转到本社团活动发布页
- */
 const handleApplyActivity = () => {
   router.push("/apply?tab=activity");
 };
 
-/**
- * 获取活动列表数据
- */
 const fetchActivityList = async () => {
   isLoading.value = true;
   error.value = null;
@@ -123,61 +123,40 @@ const fetchActivityList = async () => {
       page: currentPage.value,
       size: pageSize.value,
       keyword: searchKey.value,
-      status: filterStatus.value,
+      status: filters.value.status,
     };
 
     const response = await getActivityListAPI(params);
     activityList.value = response.data?.list || [];
     total.value = response.data?.total || 0;
   } catch (err) {
-    error.value = err.message || "获取活动列表失败，请重试";
+    error.value = getErrorMessage(err, "获取活动列表失败，请重试");
     console.error("活动列表加载错误:", err);
   } finally {
     isLoading.value = false;
   }
 };
 
-/**
- * 搜索处理
- */
 const handleSearch = () => {
   currentPage.value = 1;
   fetchActivityList();
 };
 
-/**
- * 筛选条件变化处理
- */
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchActivityList();
-};
-
-/**
- * 分页大小变化处理
- */
 const handlePageSizeChange = (size) => {
   pageSize.value = size;
   currentPage.value = 1;
   fetchActivityList();
 };
 
-/**
- * 页码变化处理
- */
 const handlePageChange = (page) => {
   currentPage.value = page;
   fetchActivityList();
 };
 
-/**
- * 活动项点击跳转详情
- */
 const handleActivityClick = (id) => {
   router.push(`/activity/${id}`);
 };
 
-// 页面加载时初始化数据
 onMounted(() => {
   fetchActivityList();
 });
@@ -191,46 +170,31 @@ onMounted(() => {
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 20px;
+  gap: 16px;
 }
 
-.search-input {
-  width: 300px;
+.page-header h1 {
+  margin: 0 0 6px;
 }
 
-.filterStatus {
-  width: 200px;
-  float: right;
+.page-desc {
+  margin: 0;
+  color: var(--text-light-color);
 }
+
 .header-actions {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
-}
-
-.loading-container {
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .error-message {
   margin: 20px 0;
-}
-
-.no-data {
-  padding: 50px 0;
-  text-align: center;
-}
-
-.activity-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 10px;
 }
 
 .pagination-container {
@@ -242,16 +206,11 @@ onMounted(() => {
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
   }
 
-  .search-input {
-    width: 100%;
-  }
-
-  .activity-list {
-    grid-template-columns: 1fr;
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

@@ -1,42 +1,44 @@
 <template>
   <div class="club-list-page">
-    <!-- 搜索区域 -->
-    <div class="search-bar">
-      <el-input
-        v-model="searchKey"
-        placeholder="搜索社团名称或关键词"
-        clearable
-        @clear="handleSearch"
-        @keyup.enter="handleSearch"
-      >
-        <template #append>
-          <el-button type="primary" @click="handleSearch">
-            <el-icon>
-              <Search />
-            </el-icon>
-            搜索
-          </el-button>
-        </template>
-      </el-input>
-    </div>
+    <div class="page-header">
+      <div>
+        <h1>社团广场</h1>
+        <p class="page-desc">按名称或类别筛选，快速找到你想加入的社团。</p>
+      </div>
 
-    <!-- 社团列表 -->
-    <div class="club-grid" v-loading="loading">
-      <ClubCard
-        v-for="club in clubList"
-        :key="club.id"
-        :club="club"
-        @click="goToDetail(club.id)"
+      <ListFilterBar
+        v-model:keyword="searchKey"
+        v-model:filters="filters"
+        :filter-items="filterItems"
+        placeholder="搜索社团名称或关键词"
+        action-text="查找社团"
+        @search="handleSearch"
       />
     </div>
 
-    <!-- 无数据状态 -->
-    <div v-if="clubList.length === 0 && !loading" class="no-data">
-      <el-empty description="暂无社团数据" />
-    </div>
+    <FrontLoadingState
+      v-if="loading"
+      title="社团加载中"
+      description="正在整理社团广场内容，请稍等一下。"
+    />
 
-    <!-- 分页组件 -->
-    <div class="pagination-container mt-20">
+    <FrontErrorState
+      v-else-if="error"
+      :description="error"
+      @retry="loadClubList"
+    />
+
+    <FrontEmptyState
+      v-else-if="clubList.length === 0"
+      title="还没有找到社团"
+      description="换个关键词或类别试试，也可以稍后再来看看。"
+      action-text="重新加载"
+      @action="loadClubList"
+    />
+
+    <ClubList v-else :clubs="clubList" @item-click="goToDetail" />
+
+    <div v-if="clubStore.total > 0" class="pagination-container mt-20">
       <el-pagination
         v-model:current-page="clubStore.currentPage"
         v-model:page-size="clubStore.pageSize"
@@ -51,83 +53,96 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useClubStore } from "@/stores/clubStore";
-import ClubCard from "./components/ClubCard.vue";
-import { ElMessage, ElEmpty } from "element-plus";
-import { Search } from "@element-plus/icons-vue";
+import ListFilterBar from "@/components/business/ListFilterBar.vue";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import ClubList from "./components/ClubList.vue";
+import { getErrorMessage } from "@/utils/frontBusiness";
 
 const router = useRouter();
 const clubStore = useClubStore();
 const searchKey = ref(clubStore.searchKey);
-const category = ref(clubStore.category);
+const filters = ref({
+  category: clubStore.category,
+});
 const clubList = ref([]);
 const loading = ref(false);
+const error = ref("");
+const filterItems = computed(() => {
+  const categories = [...new Set(clubList.value.map((club) => club.category).filter(Boolean))];
 
-// 监听搜索关键词变化
+  if (!categories.length) {
+    return [];
+  }
+
+  return [
+    {
+      key: "category",
+      placeholder: "社团类别",
+      options: [{ label: "全部类别", value: "" }, ...categories.map((item) => ({
+        label: item,
+        value: item,
+      }))],
+    },
+  ];
+});
+
 watch(searchKey, (newVal) => {
   clubStore.setSearchKey(newVal);
 });
 
-// 监听分类变化
-watch(category, (newVal) => {
-  clubStore.setCategory(newVal);
-});
+watch(
+  () => filters.value.category,
+  (newVal) => {
+    clubStore.setCategory(newVal);
+  }
+);
 
-// 同时修正初始化加载逻辑
 const loadClubList = async () => {
-  const result = await clubStore.getClubList({
-    page: clubStore.currentPage,
-    size: clubStore.pageSize,
-    searchKey: searchKey.value,
-    category: category.value,
-  });
-  clubList.value = result.list || [];
-};
-
-// 页面加载时获取列表
-loadClubList();
-
-// 搜索处理
-const handleSearch = async () => {
   loading.value = true;
+  error.value = "";
   try {
     const result = await clubStore.getClubList({
       page: clubStore.currentPage,
       size: clubStore.pageSize,
       searchKey: searchKey.value,
-      category: category.value,
+      category: filters.value.category,
     });
-    // 正确提取接口返回的 list 数组（而非整个 result 对象）
     clubList.value = result.list || [];
-  } catch (error) {
-    console.error("获取社团列表失败:", error);
-    ElMessage.error("加载社团列表失败，请重试");
+  } catch (err) {
+    console.error("获取社团列表失败:", err);
+    error.value = getErrorMessage(err, "加载社团列表失败，请重试");
     clubList.value = [];
   } finally {
     loading.value = false;
   }
 };
 
-onMounted(() => {
-  searchKey.value = clubStore.searchKey;
-  loadClubList(); // 初始化时也需要正确加载
-});
-
-// 分页大小变化
-const handleSizeChange = async (size) => {
-  clubStore.pageSize = size;
+const handleSearch = async () => {
+  clubStore.currentPage = 1;
   await loadClubList();
 };
 
-// 页码变化
+onMounted(() => {
+  searchKey.value = clubStore.searchKey;
+  loadClubList();
+});
+
+const handleSizeChange = async (size) => {
+  clubStore.pageSize = size;
+  clubStore.currentPage = 1;
+  await loadClubList();
+};
+
 const handlePageChange = async (page) => {
   clubStore.currentPage = page;
   await loadClubList();
 };
 
-// 跳转到详情页
 const goToDetail = (id) => {
   router.push(`/club/${id}`);
 };
@@ -138,19 +153,30 @@ const goToDetail = (id) => {
   padding: 20px;
 }
 
-.club-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  margin: 0 0 6px;
+}
+
+.page-desc {
+  margin: 0;
+  color: var(--text-light-color);
 }
 
 .pagination-container {
   text-align: right;
 }
 
-.no-data {
-  padding: 50px 0;
-  text-align: center;
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+  }
 }
 </style>

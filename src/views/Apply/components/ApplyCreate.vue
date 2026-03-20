@@ -4,7 +4,13 @@
       <span>创建社团申请</span>
     </div>
 
-    <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
+    <LoginRequiredState
+      v-if="!userStore.isLogin"
+      :redirect="route.fullPath"
+      description="登录后可继续提交创建社团申请。"
+    />
+
+    <el-form v-else ref="formRef" :model="form" :rules="rules" label-width="120px">
       <!-- 社团名称 -->
       <el-form-item label="社团名称" prop="name">
         <el-input v-model="form.name" placeholder="请输入社团名称" />
@@ -52,13 +58,19 @@
 
 <script setup>
 import { ref, reactive } from "vue";
+import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { applyCreateClubAPI } from "@/apis/apply.js";
+import { useUserStore } from "@/stores/userStore";
+import LoginRequiredState from "@/components/business/LoginRequiredState.vue";
+import { getErrorMessage } from "@/utils/frontBusiness";
 
 // 表单引用
 const formRef = ref(null);
 // 提交状态
 const isSubmitting = ref(false);
+const route = useRoute();
+const userStore = useUserStore();
 
 // 表单数据
 const form = reactive({
@@ -94,6 +106,12 @@ const submitForm = async () => {
   try {
     // 表单验证
     await formRef.value.validate();
+
+    if (!userStore.isLogin) {
+      ElMessage.warning("你还未登录，登录后可继续提交创建社团申请");
+      return;
+    }
+
     isSubmitting.value = true;
 
     // 调用API提交申请
@@ -103,8 +121,8 @@ const submitForm = async () => {
     // 重置表单
     formRef.value.resetFields();
   } catch (error) {
-    if (error.name !== "ValidationError") {
-      ElMessage.error("提交失败：" + (error.message || "未知错误"));
+    if (error?.name !== "ValidationError") {
+      ElMessage.error("提交失败：" + getErrorMessage(error, "未知错误"));
     }
   } finally {
     isSubmitting.value = false;

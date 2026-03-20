@@ -19,22 +19,27 @@
         <el-empty description="暂无申请记录" />
       </div>
 
-      <el-table v-else :data="applyList" border>
-        <el-table-column prop="id" label="申请ID" width="100" />
-        <el-table-column prop="title" label="申请标题" />
+      <el-table v-else :data="applyList" stripe>
+        <el-table-column prop="title" label="申请内容" min-width="220">
+          <template #default="scope">
+            {{ scope.row.title || scope.row.clubName || scope.row.activityTitle || "申请记录" }}
+          </template>
+        </el-table-column>
         <el-table-column prop="type" label="申请类型" width="120">
           <template #default="scope">
-            <el-tag :type="getApplyTypeTag(scope.row.type)">
+            <el-tag :type="getApplyTypeTagType(scope.row.type)" effect="plain" round>
               {{ formatApplyType(scope.row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="申请时间" width="160" />
+        <el-table-column label="提交时间" width="180">
+          <template #default="scope">
+            {{ scope.row.createTime || scope.row.applyTime || "时间待更新" }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="120">
           <template #default="scope">
-            <el-tag :type="getStatusTagType(scope.row.status)">
-              {{ formatStatus(scope.row.status) }}
-            </el-tag>
+            <ApplyStatusTag :status="scope.row.status" />
           </template>
         </el-table-column>
       </el-table>
@@ -46,64 +51,19 @@
 import { ref, onMounted } from "vue";
 import { useApplyStore } from "@/stores/applyStore";
 import { ElMessage } from "element-plus";
+import ApplyStatusTag from "@/components/business/ApplyStatusTag.vue";
+import { formatApplyType, getApplyTypeTagType } from "@/utils/frontBusiness";
 
-// 初始化 store
 const applyStore = useApplyStore();
 
-// 状态管理
 const applyList = ref([]);
 const loading = ref(false);
 const error = ref("");
 
-const formatApplyType = (type) => {
-  const typeMap = {
-    join: "加入社团",
-    join_club: "加入社团",
-    create: "创建社团",
-    create_club: "创建社团",
-    activity: "活动发布",
-  };
-
-  return typeMap[type] || "其他申请";
-};
-
-const getApplyTypeTag = (type) => {
-  const typeMap = {
-    join: "info",
-    join_club: "info",
-    create: "primary",
-    create_club: "primary",
-    activity: "success",
-  };
-
-  return typeMap[type] || "info";
-};
-
-// 格式化状态文本
-const formatStatus = (status) => {
-  const statusMap = {
-    pending: "待审核",
-    approved: "已通过",
-    rejected: "已拒绝",
-  };
-  return statusMap[status] || status;
-};
-
-// 获取状态标签类型
-const getStatusTagType = (status) => {
-  const typeMap = {
-    pending: "warning",
-    approved: "success",
-    rejected: "danger",
-  };
-  return typeMap[status] || "info";
-};
-
-// 加载申请列表
 const loadApplyList = async () => {
   loading.value = true;
   try {
-    const res = await applyStore.getUserApplyList();
+    const res = await applyStore.ensureUserApplyList();
     applyList.value = res.list || [];
     error.value = "";
   } catch (err) {
@@ -114,7 +74,6 @@ const loadApplyList = async () => {
   }
 };
 
-// 页面挂载时加载数据
 onMounted(() => {
   loadApplyList();
 });

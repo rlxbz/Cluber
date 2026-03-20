@@ -63,14 +63,7 @@
         </div>
       </div>
 
-      <div v-else class="club-grid">
-        <ClubCard
-          v-for="club in clubList"
-          :key="club.id"
-          :club="club"
-          @click="handleViewDetail(club.id)"
-        />
-      </div>
+      <ClubList v-else :clubs="clubList" @item-click="handleViewDetail" />
     </el-card>
   </div>
 </template>
@@ -78,7 +71,7 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import ClubCard from "@/views/Club/components/ClubCard.vue";
+import ClubList from "@/views/Club/components/ClubList.vue";
 import { useClubStore } from "@/stores/clubStore";
 import { useUserStore } from "@/stores/userStore";
 
@@ -177,13 +170,6 @@ onMounted(() => {
   text-align: center;
 }
 
-.club-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
-}
-
 .manage-card {
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -271,10 +257,6 @@ onMounted(() => {
 @media (max-width: 768px) {
   .member-club {
     padding: 0 10px;
-  }
-
-  .club-grid {
-    grid-template-columns: 1fr;
   }
 
   .manage-card__footer {

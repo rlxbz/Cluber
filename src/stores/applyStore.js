@@ -10,6 +10,9 @@ import {
   getActivityApplyListAPI,
 } from "@/apis/apply.js";
 import { useActivityStore } from "./activityStore";
+import { isPendingClubJoinApply, normalizeId } from "@/utils/frontBusiness";
+
+let userApplyListPromise = null;
 
 export const useApplyStore = defineStore("apply", {
   state: () => ({
@@ -17,7 +20,12 @@ export const useApplyStore = defineStore("apply", {
     currentApply: null,
     loading: false,
     error: null,
+    userApplyLoaded: false,
   }),
+  getters: {
+    hasPendingClubJoinApply: (state) => (clubId) =>
+      state.applyList.some((item) => isPendingClubJoinApply(item, clubId)),
+  },
 
   actions: {
     async applyJoinClub(data) {
@@ -26,6 +34,23 @@ export const useApplyStore = defineStore("apply", {
 
       try {
         const res = await applyJoinClubAPI(data);
+        const clubId = normalizeId(data?.clubId ?? data?.targetId);
+
+        if (clubId && !this.hasPendingClubJoinApply(clubId)) {
+          this.applyList = [
+            {
+              id: `local-join-${clubId}-${Date.now()}`,
+              type: "join_club",
+              clubId,
+              targetId: clubId,
+              status: "pending",
+              title: "入社申请",
+              createTime: new Date().toISOString(),
+            },
+            ...this.applyList,
+          ];
+        }
+
         return res.data;
       } catch (error) {
         this.error = error.message || "提交入社申请失败";
@@ -75,6 +100,7 @@ export const useApplyStore = defineStore("apply", {
       try {
         const res = await getUserApplyListAPI(params);
         this.applyList = res.data?.list || [];
+        this.userApplyLoaded = true;
         return res.data || { list: [], total: 0 };
       } catch (error) {
         this.error = error.message || "获取我的申请记录失败";
@@ -83,6 +109,32 @@ export const useApplyStore = defineStore("apply", {
       } finally {
         this.loading = false;
       }
+    },
+
+    async ensureUserApplyList(params = {}, force = false) {
+      const hasParams = Object.keys(params || {}).length > 0;
+
+      if (!force && !hasParams && this.userApplyLoaded) {
+        return {
+          list: this.applyList,
+          total: this.applyList.length,
+        };
+      }
+
+      if (!force && !hasParams && userApplyListPromise) {
+        return userApplyListPromise;
+      }
+
+      const requestTask = this.getUserApplyList(params);
+
+      if (!force && !hasParams) {
+        userApplyListPromise = requestTask.finally(() => {
+          userApplyListPromise = null;
+        });
+        return userApplyListPromise;
+      }
+
+      return requestTask;
     },
 
     async getClubJoinApplications(clubId, params = {}) {

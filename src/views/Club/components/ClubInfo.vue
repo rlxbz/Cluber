@@ -23,10 +23,7 @@
           </span>
         </div>
         <div class="club-actions">
-          <el-button v-if="!isJoined" type="primary" @click="handleJoin">
-            申请加入
-          </el-button>
-          <el-button v-else type="success" disabled> 已加入 </el-button>
+          <JoinButton />
         </div>
       </div>
     </div>
@@ -56,13 +53,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { computed } from "vue";
 import { useClubStore } from "@/stores/clubStore";
-import { useApplyStore } from "@/stores/applyStore";
-import { ElMessage } from "element-plus";
 import { UserFilled, Calendar, LocationFilled } from "@element-plus/icons-vue";
 
 import ClubOverview from "./ClubDashboard.vue";
+import JoinButton from "./JoinButton.vue";
 // 接收父组件传入的社团信息
 const props = defineProps({
   clubInfo: {
@@ -73,13 +69,7 @@ const props = defineProps({
 
 // 状态管理
 const clubStore = useClubStore();
-const applyStore = useApplyStore();
 const defaultLogo = "https://cube.elemecdn.com/3/7c/3ea6beec64348aa67243e5c931.jpeg";
-
-// 计算属性：判断是否已加入社团
-const isJoined = computed(() => {
-  return clubStore.myClubs.some((club) => club.id === props.clubInfo.id);
-});
 
 // 计算属性：根据社团等级返回标签类型
 const getLevelType = computed(() => {
@@ -90,16 +80,6 @@ const getLevelType = computed(() => {
   };
   return levelMap[props.clubInfo.level] || "default";
 });
-
-// 申请加入社团
-const handleJoin = async () => {
-  try {
-    await applyStore.applyJoinClub({ clubId: props.clubInfo.id });
-    ElMessage.success("申请已提交，请等待审核");
-  } catch (err) {
-    ElMessage.error(err.message || "申请失败，请重试");
-  }
-};
 </script>
 
 <style scoped>

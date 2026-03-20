@@ -1,25 +1,57 @@
 <template>
   <div class="activity-detail-page">
-    <el-card v-if="!loading && activityDetail">
+    <FrontLoadingState
+      v-if="loading"
+      title="活动详情加载中"
+      description="正在整理这场活动的最新信息。"
+    />
+
+    <FrontErrorState
+      v-else-if="error"
+      :description="error"
+      @retry="fetchActivityDetail"
+    />
+
+    <FrontEmptyState
+      v-else-if="!activityDetail"
+      title="没有找到这场活动"
+      description="活动可能已下线或链接有误，你可以返回活动列表继续查看其他内容。"
+      action-text="返回活动列表"
+      @action="router.push('/activity')"
+    />
+
+    <el-card v-else>
       <div class="activity-header">
-        <h1 class="activity-title">{{ activityDetail.title }}</h1>
+        <div class="activity-heading">
+          <h1 class="activity-title">{{ activityDetail.title }}</h1>
+          <ActivitySignUpStatus :activity="activityDetail" />
+        </div>
+
         <div class="activity-actions">
-          <el-button
-            v-if="canCancelSignUp"
-            @click="handleCancelSignUp"
-            :loading="cancelLoading"
-            type="warning"
-          >
-            取消报名
-          </el-button>
-          <el-button
-            v-if="canSignUp"
-            @click="handleSignUp"
-            :loading="signUpLoading"
-            type="primary"
-          >
-            立即报名
-          </el-button>
+          <LoginRequiredState
+            v-if="!userStore.isLogin"
+            compact
+            :redirect="route.fullPath"
+            description="登录后即可继续报名这场活动。"
+          />
+          <template v-else>
+            <el-button
+              v-if="canCancelSignUp"
+              @click="handleCancelSignUp"
+              :loading="cancelLoading"
+              type="warning"
+            >
+              取消报名
+            </el-button>
+            <el-button
+              v-if="canSignUp"
+              @click="handleSignUp"
+              :loading="signUpLoading"
+              type="primary"
+            >
+              立即报名
+            </el-button>
+          </template>
         </div>
       </div>
 
@@ -64,33 +96,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import {
   getActivityDetailAPI,
   signUpActivityAPI,
   cancelSignUpAPI,
 } from "@/apis/activity";
+import ActivitySignUpStatus from "@/components/business/ActivitySignUpStatus.vue";
+import FrontLoadingState from "@/components/business/FrontLoadingState.vue";
+import FrontEmptyState from "@/components/business/FrontEmptyState.vue";
+import FrontErrorState from "@/components/business/FrontErrorState.vue";
+import LoginRequiredState from "@/components/business/LoginRequiredState.vue";
+import { getActivitySignupStatusMeta, getErrorMessage } from "@/utils/frontBusiness";
+import { useUserStore } from "@/stores/userStore";
 
-// 路由参数
 const route = useRoute();
-const activityId = route.params.id;
+const router = useRouter();
+const userStore = useUserStore();
+const activityId = computed(() => route.params.id);
 
-// 页面状态
 const activityDetail = ref(null);
 const loading = ref(true);
+const error = ref("");
 const signUpLoading = ref(false);
 const cancelLoading = ref(false);
+const signUpStatusMeta = computed(() => getActivitySignupStatusMeta(activityDetail.value || {}));
+const canSignUp = computed(() => signUpStatusMeta.value.key === "available");
+const canCancelSignUp = computed(() => Boolean(activityDetail.value?.isSigned));
 
-// 计算属性：是否可报名
-const canSignUp = ref(false);
-// 计算属性：是否可取消报名
-const canCancelSignUp = ref(false);
-
-/**
- * 格式化活动类型显示文本
- */
 const formatActivityType = (type) => {
   const typeMap = {
     lecture: "学术讲座",
@@ -101,71 +136,70 @@ const formatActivityType = (type) => {
   return typeMap[type] || type;
 };
 
-/**
- * 获取活动详情
- */
 const fetchActivityDetail = async () => {
+  const currentActivityId = activityId.value;
+
+  if (!currentActivityId || Number.isNaN(Number(currentActivityId))) {
+    activityDetail.value = null;
+    error.value = "活动编号无效，请返回活动列表重新选择。";
+    loading.value = false;
+    return;
+  }
+
   try {
     loading.value = true;
-    const res = await getActivityDetailAPI(activityId);
-    activityDetail.value = res.data;
-
-    // 更新报名状态
-    canSignUp.value =
-      res.data.currentParticipants < res.data.maxParticipants && !res.data.isSigned;
-    canCancelSignUp.value = res.data.isSigned;
-  } catch (error) {
-    ElMessage.error("获取活动详情失败：" + (error.message || "未知错误"));
+    error.value = "";
+    const res = await getActivityDetailAPI(currentActivityId);
+    activityDetail.value = res.data || null;
+  } catch (err) {
+    activityDetail.value = null;
+    error.value = getErrorMessage(err, "获取活动详情失败，请稍后重试");
   } finally {
     loading.value = false;
   }
 };
 
-/**
- * 处理活动报名
- */
 const handleSignUp = async () => {
+  if (!userStore.isLogin) {
+    ElMessage.warning("你还未登录，登录后可继续报名");
+    return;
+  }
+
   if (!canSignUp.value) {
-    ElMessage.warning("活动名额已满，无法报名");
+    ElMessage.warning(signUpStatusMeta.value.text);
     return;
   }
 
   try {
     signUpLoading.value = true;
-    await signUpActivityAPI(activityId);
+    await signUpActivityAPI(activityId.value);
     ElMessage.success("报名成功！");
-    fetchActivityDetail(); // 刷新详情
+    await fetchActivityDetail();
   } catch (error) {
     ElMessage.error(
-      "报名失败：" + (error.response?.data?.message || error.message || "操作失败")
+      "报名失败：" + getErrorMessage(error, "请稍后重试")
     );
   } finally {
     signUpLoading.value = false;
   }
 };
 
-/**
- * 处理取消报名
- */
 const handleCancelSignUp = async () => {
   try {
     cancelLoading.value = true;
-    await cancelSignUpAPI(activityId);
+    await cancelSignUpAPI(activityId.value);
     ElMessage.success("取消报名成功！");
-    fetchActivityDetail(); // 刷新详情
+    await fetchActivityDetail();
   } catch (error) {
     ElMessage.error(
-      "取消报名失败：" + (error.response?.data?.message || error.message || "操作失败")
+      "取消报名失败：" + getErrorMessage(error, "请稍后重试")
     );
   } finally {
     cancelLoading.value = false;
   }
 };
 
-// 页面挂载时加载数据
-onMounted(() => {
-  fetchActivityDetail();
-});
+watch(activityId, fetchActivityDetail, { immediate: true });
 </script>
 
 <style scoped>
@@ -176,8 +210,15 @@ onMounted(() => {
 .activity-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 20px;
+}
+
+.activity-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .activity-title {
@@ -208,5 +249,11 @@ onMounted(() => {
   border-left: 4px solid #409eff;
   padding-left: 10px;
   margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .activity-header {
+    flex-direction: column;
+  }
 }
 </style>

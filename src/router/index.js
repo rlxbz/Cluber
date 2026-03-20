@@ -200,6 +200,12 @@ const router = createRouter({
       meta: { requiresAuth: false, hidden: true, title: "登录" },
     },
     {
+      path: "/403",
+      name: "forbidden",
+      component: () => import("@/views/Forbidden/index.vue"),
+      meta: { requiresAuth: false, hidden: true, title: "暂无访问权限" },
+    },
+    {
       path: "/preferences",
       alias: "/setting",
       name: "front-preferences",
